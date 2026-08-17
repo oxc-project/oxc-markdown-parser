@@ -1,0 +1,32 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..111]
+  HtmlBlock [0..16] kind=1 trailing_newline=false
+    lines[0] [0..5] "<pre>"
+    lines[1] [6..9] "raw"
+    lines[2] [10..16] "</pre>"
+  HtmlBlock [18..28] kind=2 trailing_newline=false
+    lines[0] [18..24] "<!-- c"
+    lines[1] [25..28] "-->"
+  HtmlBlock [30..38] kind=3 trailing_newline=false
+    lines[0] [30..38] "<?php ?>"
+  HtmlBlock [40..52] kind=4 trailing_newline=false
+    lines[0] [40..52] "<!DOCTYPE x>"
+  HtmlBlock [54..67] kind=5 trailing_newline=false
+    lines[0] [54..63] "<![CDATA["
+    lines[1] [64..67] "]]>"
+  HtmlBlock [69..79] kind=6 trailing_newline=false
+    lines[0] [69..74] "<div>"
+    lines[1] [75..79] "text"
+  HtmlBlock [81..90] kind=7 trailing_newline=false
+    lines[0] [81..84] "<a>"
+    lines[1] [85..90] "seven"
+  Paragraph [92..110]
+    Text [92..96] "para"
+    SoftBreak [97..97]
+    HtmlInline [97..100]
+      pieces[0] [97..100] "<a>"
+    SoftBreak [101..101]
+    Text [101..110] "not seven"
+blanks: [17..17] [29..29] [39..39] [53..53] [68..68] [80..80] [91..91]

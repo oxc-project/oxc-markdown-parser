@@ -1,0 +1,14 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..106]
+  CodeBlock [0..39] fence=` info=[3..15] "rust title=x"
+    lines[0] [16..28] "fn main() {}"
+    lines[1] [29..29] ""
+    lines[2] [30..35] "  end"
+  CodeBlock [44..86] fence=~
+    lines[0] [51..65] "indented fence"
+    lines[1] [69..79] " keeps one"
+  CodeBlock [88..105] fence=`
+    lines[0] [93..105] "unterminated"
+blanks: [40..40] [87..87]

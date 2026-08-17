@@ -1,0 +1,19 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..24]
+  Paragraph [0..1]
+    Text [0..1] "a"
+  HtmlBlock [2..11] kind=7 trailing_newline=false
+    lines[0] [2..5] "<a>"
+    lines[1] [6..9] ":-:"
+    lines[2] [10..11] "b"
+  Paragraph [13..14]
+    Text [13..14] "c"
+  Table [15..23] align=[Center]
+    TableRow [15..19]
+      TableCell [15..19]
+        HtmlInline [15..18]
+          pieces[0] [15..18] "<a>"
+        Text [18..19] "b"
+blanks: [12..12]

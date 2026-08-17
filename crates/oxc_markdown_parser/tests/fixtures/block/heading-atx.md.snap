@@ -1,0 +1,14 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..46]
+  Heading [0..4] level=1 kind=atx
+    Text [2..4] "h1"
+  Heading [5..15] level=2 kind=atx
+    Text [10..12] "h2"
+  Heading [18..29] level=6 kind=atx
+    Text [25..27] "h6"
+  Paragraph [30..45]
+    Text [30..41] "####### not"
+    SoftBreak [42..42]
+    Text [42..45] "#no"

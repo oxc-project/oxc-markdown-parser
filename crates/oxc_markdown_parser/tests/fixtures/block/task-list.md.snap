@@ -1,0 +1,35 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..84]
+  List [0..83] marker=bullet '-' tight=false
+    ListItem [0..7] marker=[0..1] "-" padding=1 spread=false checkbox=[2..5] "[ ]" checked=false
+      Paragraph [6..7]
+        Text [6..7] "a"
+    ListItem [8..15] marker=[8..9] "-" padding=1 spread=false checkbox=[10..13] "[x]" checked=true
+      Paragraph [14..15]
+        Text [14..15] "b"
+    ListItem [16..25] marker=[16..17] "-" padding=1 spread=false checkbox=[18..21] "[X]" checked=true
+      Paragraph [21..25]
+        SoftBreak [24..24]
+        Text [24..25] "c"
+    ListItem [26..31] marker=[26..27] "-" padding=1 spread=false
+      Paragraph [28..31]
+        Text [28..31] "[ ]"
+    ListItem [32..37] marker=[32..33] "-" padding=1 spread=false
+      Paragraph [34..37]
+        Text [34..37] "[ ]"
+    ListItem [39..46] marker=[39..40] "-" padding=1 spread=false checkbox=[41..44] "[\t]" checked=false
+      Paragraph [45..46]
+        Text [45..46] "d"
+    ListItem [47..64] marker=[47..48] "-" padding=1 spread=false checkbox=[59..62] "[ ]" checked=false
+      Definition [49..56] dest=[54..56] "/u" angle=false
+        label[0] [50..51] "a"
+      Paragraph [63..64]
+        Text [63..64] "e"
+    ListItem [65..83] marker=[65..66] "-" padding=1 spread=true
+      Definition [67..74] dest=[72..74] "/u" angle=false
+        label[0] [68..69] "a"
+      Paragraph [78..83]
+        Text [78..83] "[ ] f"
+blanks: [75..75]

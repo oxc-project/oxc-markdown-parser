@@ -1,0 +1,27 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..57]
+  Table [0..38] align=[Left, Right]
+    TableRow [0..9]
+      TableCell [2..3]
+        Text [2..3] "a"
+      TableCell [6..7]
+        Text [6..7] "b"
+    TableRow [22..36]
+      TableCell [24..30]
+        Text [24..30] "c \\| d"
+      TableCell [33..34]
+        Text [33..34] "e"
+    TableRow [37..38]
+      TableCell [37..38]
+        Text [37..38] "f"
+  Paragraph [40..44]
+    Text [40..44] "text"
+  Table [45..56] align=[None, Center]
+    TableRow [45..50]
+      TableCell [45..46]
+        Text [45..46] "x"
+      TableCell [49..50]
+        Text [49..50] "y"
+blanks: [39..39]

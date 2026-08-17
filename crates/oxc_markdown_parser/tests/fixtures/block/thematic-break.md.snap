@@ -1,0 +1,7 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..16]
+  ThematicBreak [0..3] "***"
+  ThematicBreak [4..9] "- - -"
+  ThematicBreak [10..13] "___"

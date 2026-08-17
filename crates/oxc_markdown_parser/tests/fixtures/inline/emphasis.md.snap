@@ -1,0 +1,32 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..64]
+  Paragraph [0..63]
+    Emphasis [0..3] marker=*
+      Text [1..2] "a"
+    Text [3..4] " "
+    Strong [4..9]
+      Text [6..7] "b"
+    Text [9..10] " "
+    Emphasis [10..17] marker=*
+      Strong [11..16]
+        Text [13..14] "c"
+    Text [17..18] " "
+    Emphasis [18..21] marker=_
+      Text [19..20] "d"
+    Text [21..22] " "
+    Strong [22..27]
+      Text [24..25] "e"
+    SoftBreak [28..28]
+    Emphasis [28..38] marker=*
+      Text [29..37] "foo**bar"
+    SoftBreak [39..39]
+    Strong [39..46]
+      Text [41..44] "a*b"
+    SoftBreak [47..47]
+    Text [47..54] "a*\"b\"*c"
+    SoftBreak [55..55]
+    Text [55..60] "_a_b "
+    Emphasis [60..63] marker=_
+      Text [61..62] "c"

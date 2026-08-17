@@ -1,0 +1,12 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..29]
+  MathBlock [0..18] meta=[3..7] "meta"
+    lines[0] [9..12] "x^2"
+    lines[1] [13..13] ""
+    lines[2] [14..15] "y"
+  Blockquote [20..28]
+    MathBlock [22..28]
+      lines[0] [27..28] "z"
+blanks: [19..19]

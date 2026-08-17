@@ -1,0 +1,28 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..61]
+  Paragraph [0..43]
+    Image [0..8] kind=inline dest=[5..7] "/u" angle=false
+      Text [2..3] "a"
+    Text [8..9] " "
+    Image [9..30] kind=inline dest=[27..29] "/f" angle=false
+      Text [11..13] "b "
+      Emphasis [13..16] marker=*
+        Text [14..15] "c"
+      Text [16..17] " "
+      Image [17..25] kind=inline dest=[22..24] "/e" angle=false
+        Text [19..20] "d"
+    SoftBreak [31..31]
+    Text [31..32] "!"
+    FootnoteReference [32..36] "[^1]" label=[34..35] "1"
+    Text [36..37] " "
+    Image [37..43] kind=collapsed
+      label[0] [39..40] "g"
+      Text [39..40] "g"
+  Definition [45..52] dest=[50..52] "/g" angle=false
+    label[0] [46..47] "g"
+  FootnoteDefinition [53..60] label=[55..56] "1"
+    Paragraph [59..60]
+      Text [59..60] "n"
+blanks: [44..44]

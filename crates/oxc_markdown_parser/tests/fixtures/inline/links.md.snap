@@ -1,0 +1,48 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..122]
+  Paragraph [0..104]
+    Link [0..7] kind=inline dest=[4..6] "/u" angle=false
+      Text [1..2] "a"
+    Text [7..8] " "
+    Link [8..22] kind=inline dest=[12..17] "<u v>" angle=true
+      title[0] [18..21] "\"t\""
+      Text [9..10] "b"
+    Text [22..23] " "
+    Link [23..29] kind=inline dest=[28..28] "" angle=false
+      Text [24..25] "c"
+    Text [29..30] " "
+    Link [30..35] kind=inline dest=[34..34] "" angle=false
+      Text [31..32] "d"
+    Text [35..36] " "
+    Link [36..47] kind=inline dest=[40..42] "/u" angle=false
+      title[0] [43..46] "'t'"
+      Text [37..38] "e"
+    Text [47..48] " "
+    Link [48..59] kind=inline dest=[52..54] "/u" angle=false
+      title[0] [55..58] "(t)"
+      Text [49..50] "f"
+    SoftBreak [60..60]
+    Link [60..66] kind=full
+      label[0] [64..65] "A"
+      Text [61..62] "g"
+    Text [66..67] " "
+    Link [67..72] kind=collapsed
+      label[0] [68..69] "g"
+      Text [68..69] "g"
+    Text [72..73] " "
+    Link [73..76] kind=shortcut
+      label[0] [74..75] "g"
+      Text [74..75] "g"
+    Text [76..86] " [h][] [ ]"
+    SoftBreak [87..87]
+    Link [87..98] kind=inline dest=[91..93] "/u" angle=false
+      title[0] [94..97] "\"t\""
+      Text [88..89] "x"
+    Text [98..104] " after"
+  Definition [106..113] dest=[111..113] "/u" angle=false
+    label[0] [107..108] "a"
+  Definition [114..121] dest=[119..121] "/g" angle=false
+    label[0] [115..116] "g"
+blanks: [105..105]

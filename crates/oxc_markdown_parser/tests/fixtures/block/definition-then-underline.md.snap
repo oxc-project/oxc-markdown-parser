@@ -1,0 +1,16 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..36]
+  Definition [0..7] dest=[5..7] "/u" angle=false
+    label[0] [1..2] "a"
+  ThematicBreak [8..11] "---"
+  Definition [13..20] dest=[18..20] "/u" angle=false
+    label[0] [14..15] "b"
+  Paragraph [21..24]
+    Text [21..24] "==="
+  Definition [26..33] dest=[31..33] "/u" angle=false
+    label[0] [27..28] "c"
+  Paragraph [34..35]
+    Text [34..35] "-"
+blanks: [12..12] [25..25]

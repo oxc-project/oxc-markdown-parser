@@ -1,0 +1,12 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..28]
+  Paragraph [0..18]
+    Text [0..1] "a"
+    FootnoteReference [1..5] "[^1]" label=[3..4] "1"
+    Text [5..18] " b[^x] c[^ 1]"
+  FootnoteDefinition [20..27] label=[22..23] "1"
+    Paragraph [26..27]
+      Text [26..27] "n"
+blanks: [19..19]

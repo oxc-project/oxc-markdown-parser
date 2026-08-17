@@ -1,0 +1,14 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..35]
+  Paragraph [0..34]
+    Link [0..15] kind=inline dest=[4..6] "/u" angle=false
+      title[0] [7..9] "\"t"
+      title[1] [10..14] "  t\""
+      Text [1..2] "a"
+    Text [15..16] " "
+    Link [16..34] kind=inline dest=[20..23] "<c>" angle=true
+      title[0] [24..26] "(u"
+      title[1] [27..33] "    v)"
+      Text [17..18] "b"

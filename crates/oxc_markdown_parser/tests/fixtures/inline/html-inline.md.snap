@@ -1,0 +1,16 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..42]
+  Paragraph [0..41]
+    Text [0..2] "a "
+    HtmlInline [2..14]
+      pieces[0] [2..9] "<b c=\"d"
+      pieces[1] [10..14] " e\">"
+    Text [14..17] " f "
+    HtmlInline [17..27]
+      pieces[0] [17..27] "<!-- g -->"
+    Text [27..28] " "
+    HtmlInline [28..32]
+      pieces[0] [28..32] "</h>"
+    Text [32..41] " <i/ > <j"

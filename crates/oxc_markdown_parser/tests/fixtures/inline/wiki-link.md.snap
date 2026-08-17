@@ -1,0 +1,11 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..28]
+  Paragraph [0..27]
+    WikiLink [0..5] "[[a]]"
+    Text [5..6] " "
+    WikiLink [6..13] "[[b|c]]"
+    Text [13..23] " [[ ]] [[d"
+    SoftBreak [24..24]
+    Text [24..27] "e]]"

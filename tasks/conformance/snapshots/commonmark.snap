@@ -1,0 +1,27 @@
+commonmark spec: 652/652
+  Tabs: 11/11
+  Backslash escapes: 13/13
+  Entity and numeric character references: 17/17
+  Precedence: 1/1
+  Thematic breaks: 19/19
+  ATX headings: 18/18
+  Setext headings: 27/27
+  Indented code blocks: 12/12
+  Fenced code blocks: 29/29
+  HTML blocks: 44/44
+  Link reference definitions: 27/27
+  Paragraphs: 8/8
+  Blank lines: 1/1
+  Block quotes: 25/25
+  List items: 48/48
+  Lists: 26/26
+  Inlines: 1/1
+  Code spans: 22/22
+  Emphasis and strong emphasis: 132/132
+  Links: 90/90
+  Images: 22/22
+  Autolinks: 19/19
+  Raw HTML: 20/20
+  Hard line breaks: 15/15
+  Soft line breaks: 2/2
+  Textual content: 3/3

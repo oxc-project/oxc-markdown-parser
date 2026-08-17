@@ -1,0 +1,13 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..29]
+  Paragraph [0..28]
+    Text [0..2] "a "
+    Liquid [2..9]
+      pieces[0] [2..9] "{{ b }}"
+    Text [9..12] " c "
+    Liquid [12..21]
+      pieces[0] [12..16] "{% d"
+      pieces[1] [17..21] "e %}"
+    Text [21..28] " f {{ g"

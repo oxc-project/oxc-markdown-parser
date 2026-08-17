@@ -1,0 +1,6 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..43]
+  Paragraph [0..42]
+    Text [0..42] "\\* \\a &amp; &#35; &#x1F600; &unknown; &#0;"

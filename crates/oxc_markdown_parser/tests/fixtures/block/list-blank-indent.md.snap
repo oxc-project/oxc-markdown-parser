@@ -1,0 +1,29 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..102]
+  List [0..31] marker=bullet '-' tight=true
+    ListItem [0..31] marker=[0..1] "-" padding=1 spread=false
+      Paragraph [2..3]
+        Text [2..3] "a"
+      CodeBlock [6..31] fence=`
+        lines[0] [12..13] "b"
+        lines[1] [16..16] ""
+        lines[2] [19..23] "    "
+        lines[3] [25..25] "" pad=2
+  List [33..70] marker=ordered '.' tight=false
+    ListItem [33..70] marker=[33..35] "1." padding=1 spread=true
+      Paragraph [36..37]
+        Text [36..37] "a"
+      CodeBlock [46..70] kind=indented
+        lines[0] [46..50] "code"
+        lines[1] [58..58] ""
+        lines[2] [66..70] "more"
+  List [72..101] marker=bullet '-' tight=true
+    ListItem [72..101] marker=[72..73] "-" padding=1 spread=false
+      HtmlBlock [74..101] kind=1 trailing_newline=false
+        lines[0] [74..82] "<script>"
+        lines[1] [85..86] "a"
+        lines[2] [89..89] ""
+        lines[3] [92..101] "</script>"
+blanks: [32..32] [38..38] [54..58] [71..71]

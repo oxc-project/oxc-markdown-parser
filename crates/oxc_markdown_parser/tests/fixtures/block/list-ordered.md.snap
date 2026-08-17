@@ -1,0 +1,20 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..26]
+  List [0..5] marker=ordered '.' tight=true
+    ListItem [0..5] marker=[0..3] "10." padding=1 spread=false
+      Paragraph [4..5]
+        Text [4..5] "a"
+  List [6..17] marker=ordered ')' tight=false
+    ListItem [6..11] marker=[6..9] "11)" padding=1 spread=false
+      Paragraph [10..11]
+        Text [10..11] "b"
+    ListItem [13..17] marker=[13..15] "1)" padding=1 spread=false
+      Paragraph [16..17]
+        Text [16..17] "c"
+  List [19..25] marker=ordered '.' tight=true
+    ListItem [19..25] marker=[19..23] "001." padding=1 spread=false
+      Paragraph [24..25]
+        Text [24..25] "d"
+blanks: [12..12] [18..18]

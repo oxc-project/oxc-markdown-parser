@@ -1,0 +1,31 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..86]
+  Definition [0..7] dest=[5..7] "/u" angle=false
+    label[0] [1..2] "a"
+  Definition [11..30] dest=[16..22] "</v w>" angle=true
+    label[0] [12..13] "b"
+    title[0] [23..30] "'title'"
+  Definition [31..50] dest=[38..40] "/x" angle=false
+    label[0] [32..33] "c"
+    title[0] [43..45] "\"t"
+    title[1] [46..50] "  t\""
+  Paragraph [51..68]
+    Text [51..63] "[d]: /y \"bad"
+    SoftBreak [64..64]
+    Text [64..68] "text"
+  Paragraph [70..85]
+    Link [70..73] kind=shortcut
+      label[0] [71..72] "a"
+      Text [71..72] "a"
+    Text [73..74] " "
+    Link [74..77] kind=shortcut
+      label[0] [75..76] "b"
+      Text [75..76] "b"
+    Text [77..78] " "
+    Link [78..81] kind=shortcut
+      label[0] [79..80] "c"
+      Text [79..80] "c"
+    Text [81..85] " [d]"
+blanks: [69..69]

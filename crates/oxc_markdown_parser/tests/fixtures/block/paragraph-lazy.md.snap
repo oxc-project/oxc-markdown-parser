@@ -1,0 +1,13 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..12]
+  Blockquote [0..11]
+    Paragraph [2..11] lazy=[[4..5] "b", [10..11] "d"]
+      Text [2..3] "a"
+      SoftBreak [4..4]
+      Text [4..5] "b"
+      SoftBreak [8..8]
+      Text [8..9] "c"
+      SoftBreak [10..10]
+      Text [10..11] "d"

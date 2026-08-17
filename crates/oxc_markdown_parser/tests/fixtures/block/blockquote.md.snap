@@ -1,0 +1,14 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..18]
+  Blockquote [0..14]
+    Paragraph [1..2]
+      Text [1..2] "a"
+    Blockquote [5..8]
+      Paragraph [7..8]
+        Text [7..8] "b"
+    Paragraph [13..14]
+      Text [13..14] "c"
+  Blockquote [16..17]
+blanks: [10..10] [15..15]

@@ -1,0 +1,14 @@
+[files]
+extend-exclude = [
+  # WHATWG entity names; many look like misspellings (`&curren;`, `&andd;`, …)
+  "crates/oxc_markdown_parser/src/syntax/entities.rs",
+  "tasks/conformance/snapshots",
+]
+
+[default.extend-words]
+# Provisional-node type in inline/emphasis.rs
+pn = "pn"
+# "mis-parses"
+mis = "mis"
+# micromark's test name, quoted in DIVERGENCES.md
+lazyness = "lazyness"

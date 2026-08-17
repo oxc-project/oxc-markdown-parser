@@ -1,0 +1,5 @@
+# Auto detect text files and perform LF normalization
+* text=auto eol=lf
+
+# CRLF fixture: the line endings are the test
+crates/oxc_markdown_parser/tests/fixtures/hazards/crlf.md -text

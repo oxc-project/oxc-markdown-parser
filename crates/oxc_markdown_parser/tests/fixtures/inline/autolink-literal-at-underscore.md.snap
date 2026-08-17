@@ -1,0 +1,8 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..13]
+  Paragraph [0..12]
+    Text [0..2] "a "
+    AutolinkLiteral [2..10] "_u@e.com"
+    Text [10..12] " b"

@@ -1,0 +1,18 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..59]
+  Paragraph [0..58]
+    Strikethrough [0..5]
+      Text [2..3] "a"
+    Text [5..17] " ~b~ ~~~c~~~"
+    SoftBreak [18..18]
+    Text [18..24] "x * y "
+    Strikethrough [24..32]
+      Text [26..30] "a *b"
+    Text [32..37] " c* d"
+    SoftBreak [38..38]
+    Text [38..48] "x ~~ y *a "
+    Strikethrough [48..56]
+      Text [50..54] "b* c"
+    Text [56..58] " d"

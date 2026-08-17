@@ -1,0 +1,11 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..34]
+  Paragraph [0..33]
+    Text [0..17] "a*😀*b *😀*c " non_ascii
+    Emphasis [17..23] marker=*
+      Text [18..22] "😀" non_ascii
+    Text [23..30] " d 😀" non_ascii
+    Emphasis [30..33] marker=*
+      Text [31..32] "e"

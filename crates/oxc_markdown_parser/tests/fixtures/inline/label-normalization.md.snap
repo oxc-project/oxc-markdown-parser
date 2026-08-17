@@ -1,0 +1,31 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..79]
+  Paragraph [0..30]
+    Link [0..4] kind=shortcut
+      label[0] [1..3] "σ"
+      Text [1..3] "σ" non_ascii
+    Text [4..5] " "
+    Link [5..10] kind=shortcut
+      label[0] [6..9] "ﬀ"
+      Text [6..9] "ﬀ" non_ascii
+    Text [10..11] " "
+    Link [11..17] kind=shortcut
+      label[0] [12..16] "A  B"
+      Text [12..16] "A  B"
+    Text [17..26] " [a\u{3000}b] " non_ascii cjk
+    Link [26..30] kind=shortcut
+      label[0] [27..29] "\u{a0}"
+      Text [27..29] "\u{a0}" non_ascii
+  Definition [32..40] dest=[38..40] "/1" angle=false
+    label[0] [33..35] "ς"
+  Definition [41..49] dest=[47..49] "/2" angle=false
+    label[0] [42..44] "ff"
+  Definition [50..59] dest=[57..59] "/3" angle=false
+    label[0] [51..54] "a b"
+  Definition [60..69] dest=[67..69] "/4" angle=false
+    label[0] [61..64] "a b"
+  Definition [70..78] dest=[76..78] "/5" angle=false
+    label[0] [71..73] "\u{a0}"
+blanks: [31..31]

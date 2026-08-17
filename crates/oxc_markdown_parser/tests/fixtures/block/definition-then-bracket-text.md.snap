@@ -1,0 +1,10 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..16]
+  Definition [0..7] dest=[5..7] "/u" angle=false
+    label[0] [1..2] "x"
+  Paragraph [8..15]
+    Text [8..13] "-|-]:"
+    SoftBreak [14..14]
+    Text [14..15] "b"

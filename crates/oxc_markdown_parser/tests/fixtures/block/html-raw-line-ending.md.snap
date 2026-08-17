@@ -1,0 +1,33 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..66]
+  List [0..18] marker=bullet '-' tight=true
+    ListItem [0..14] marker=[0..1] "-" padding=1 spread=false
+      HtmlBlock [2..14] kind=1 trailing_newline=true
+        lines[0] [2..10] "<script>"
+        lines[1] [13..14] "a"
+    ListItem [15..18] marker=[15..16] "-" padding=1 spread=false
+      Paragraph [17..18]
+        Text [17..18] "b"
+  Blockquote [20..34]
+    HtmlBlock [22..34] kind=1 trailing_newline=true
+      lines[0] [22..30] "<script>"
+      lines[1] [33..34] "a"
+  List [35..38] marker=bullet '+' tight=true
+    ListItem [35..38] marker=[35..36] "+" padding=1 spread=false
+      Paragraph [37..38]
+        Text [37..38] "c"
+  Blockquote [40..48]
+    HtmlBlock [42..48] kind=3 trailing_newline=false
+      lines[0] [42..44] "<?"
+      lines[1] [47..48] "a"
+  Paragraph [49..50]
+    Text [49..50] "b"
+  List [52..65] marker=ordered '.' tight=true
+    ListItem [52..65] marker=[52..54] "1." padding=1 spread=false
+      HtmlBlock [55..65] kind=2 trailing_newline=true
+        lines[0] [55..59] "<!--"
+        lines[1] [63..64] "a"
+        lines[2] [65..65] ""
+blanks: [19..19] [39..39] [51..51]

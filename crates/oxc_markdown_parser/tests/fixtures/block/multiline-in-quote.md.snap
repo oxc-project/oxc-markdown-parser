@@ -1,0 +1,27 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..80]
+  Blockquote [0..79]
+    Definition [2..27] dest=[15..17] "/u" angle=false
+      label[0] [3..6] "foo"
+      label[1] [9..12] "bar"
+      title[0] [18..20] "\"t"
+      title[1] [23..27] "  t\""
+    Paragraph [32..79]
+      Link [32..41] kind=shortcut
+        label[0] [33..40] "foo bar"
+        Text [33..40] "foo bar"
+      Text [41..42] " "
+      Link [42..55] kind=collapsed
+        label[0] [43..46] "foo"
+        label[1] [49..52] "bar"
+        Text [43..46] "foo"
+        SoftBreak [49..49]
+        Text [49..52] "bar"
+      Text [55..56] " "
+      HtmlInline [56..79]
+        pieces[0] [56..63] "<b c=\"d"
+        pieces[1] [66..69] "  e"
+        pieces[2] [72..79] "    f\">"
+blanks: [29..29]

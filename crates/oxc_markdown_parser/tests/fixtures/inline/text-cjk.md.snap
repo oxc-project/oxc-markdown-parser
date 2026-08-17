@@ -1,0 +1,10 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..22]
+  Paragraph [0..21]
+    Text [0..3] "abc"
+    SoftBreak [4..4]
+    Text [4..7] "éa" non_ascii
+    SoftBreak [8..8]
+    Text [8..21] "漢字とkana" non_ascii cjk

@@ -1,0 +1,17 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..18]
+  List [0..17] marker=bullet '-' tight=false
+    ListItem [0..3] marker=[0..1] "-" padding=1 spread=false
+      Paragraph [2..3]
+        Text [2..3] "a"
+    ListItem [5..13] marker=[5..6] "-" padding=1 spread=true
+      Paragraph [7..8]
+        Text [7..8] "b"
+      Paragraph [12..13]
+        Text [12..13] "c"
+    ListItem [14..17] marker=[14..15] "-" padding=1 spread=false
+      Paragraph [16..17]
+        Text [16..17] "d"
+blanks: [4..4] [9..9]

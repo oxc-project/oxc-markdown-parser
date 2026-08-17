@@ -1,0 +1,12 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..29]
+  CodeBlock [4..20] kind=indented
+    lines[0] [4..5] "a"
+    lines[1] [6..6] ""
+    lines[2] [11..12] "b"
+    lines[3] [17..20] "  c"
+  Paragraph [23..28]
+    Text [23..28] "after"
+blanks: [6..6] [21..21] [22..22]

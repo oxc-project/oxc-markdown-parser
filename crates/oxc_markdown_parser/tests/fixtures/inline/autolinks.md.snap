@@ -1,0 +1,22 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..82]
+  Paragraph [0..81]
+    Autolink [0..18] "<https://x.y/?a=b>" email=false
+    Text [18..19] " "
+    Autolink [19..26] "<a@b.c>" email=true
+    Text [26..27] " "
+    HtmlInline [27..30]
+      pieces[0] [27..30] "<x>"
+    Text [30..31] " "
+    HtmlInline [31..36]
+      pieces[0] [31..36] "<a b>"
+    SoftBreak [37..37]
+    AutolinkLiteral [37..51] "www.a.com/p(q)"
+    Text [51..53] ". "
+    AutolinkLiteral [53..63] "http://x.y"
+    Text [63..65] ", "
+    AutolinkLiteral [65..72] "u@e.com"
+    Text [72..73] " "
+    AutolinkLiteral [73..81] "_u@e.com"

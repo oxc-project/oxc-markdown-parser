@@ -1,0 +1,20 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..49]
+  Paragraph [0..21]
+    CodeSpan [0..3]
+      pieces[0] [1..2] "a"
+    Text [3..4] " "
+    CodeSpan [4..15]
+      pieces[0] [7..12] "b ` c"
+    Text [15..16] " "
+    CodeSpan [16..21]
+      pieces[0] [18..19] "d"
+  Blockquote [22..48]
+    Paragraph [24..48] lazy=[[35..48] "`unterminated"]
+      CodeSpan [24..34]
+        pieces[0] [25..26] "x"
+        pieces[1] [29..33] "   y"
+      SoftBreak [35..35]
+      Text [35..48] "`unterminated"

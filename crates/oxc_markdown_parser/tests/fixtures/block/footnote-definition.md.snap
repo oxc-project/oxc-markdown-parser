@@ -1,0 +1,17 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..34]
+  FootnoteDefinition [0..22] label=[2..3] "1"
+    Paragraph [6..13]
+      Text [6..7] "a"
+      SoftBreak [12..12]
+      Text [12..13] "b"
+    Paragraph [19..22] lazy=[[21..22] "d"]
+      Text [19..20] "c"
+      SoftBreak [21..21]
+      Text [21..22] "d"
+  Paragraph [24..33]
+    FootnoteReference [24..28] "[^1]" label=[26..27] "1"
+    Text [28..33] " [^2]"
+blanks: [14..14] [23..23]

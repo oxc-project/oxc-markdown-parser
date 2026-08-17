@@ -1,0 +1,17 @@
+---
+source: crates/oxc_markdown_parser/tests/ast.rs
+---
+Root [0..29]
+  CodeBlock [4..8] kind=indented
+    lines[0] [4..8] "code"
+  List [9..13] marker=ordered '.' tight=true
+    ListItem [9..13] marker=[9..11] "2." padding=1 spread=false
+      Paragraph [12..13]
+        Text [12..13] "x"
+  Paragraph [15..16]
+    Text [15..16] "b"
+  CodeBlock [22..26] kind=indented
+    lines[0] [22..26] "code"
+  List [27..28] marker=bullet '-' tight=true
+    ListItem [27..28] marker=[27..28] "-" padding=0 spread=false
+blanks: [14..14] [17..17]
