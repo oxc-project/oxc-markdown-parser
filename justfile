@@ -12,16 +12,19 @@ test:
 fmt:
     cargo fmt
 
-# Run the CommonMark spec suite and regenerate the committed snapshot under
-# tasks/conformance/snapshots/. Review with `git diff`.
+# Fetch the CommonMark and GFM spec suites (pinned versions), run them, and
+# regenerate the committed snapshots under tasks/conformance/snapshots/.
+# Review with `git diff`.
 conformance:
     cargo run -p conformance
 
-# Fetch the conformance suite files (pinned versions).
+# Fetch the conformance suite files without running them.
 conformance-clone:
-    mkdir -p tasks/conformance/repos
-    curl -fsSL https://spec.commonmark.org/0.31.2/spec.json -o tasks/conformance/repos/commonmark-spec.json
-    curl -fsSL https://raw.githubusercontent.com/github/cmark-gfm/499789b49373bfa045d0e7547e5ee63444c77bca/test/spec.txt -o tasks/conformance/repos/gfm-spec.txt
+    cargo run -p conformance -- --clone
+
+# Remove the fetched conformance suite files.
+conformance-clean:
+    cargo run -p conformance -- --clean
 
 # Differential fuzz against mdast (micromark, the parse-behavior oracle).
 # Requires `npm install` in tasks/differential once, and Node >= 22.18
