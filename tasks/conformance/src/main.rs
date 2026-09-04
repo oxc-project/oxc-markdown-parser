@@ -9,26 +9,72 @@
 //! Usage:
 //!
 //! ```text
-//! conformance      run all suites, regenerate the snapshots
-//! conformance <N>  print input/expected/actual for CommonMark example N
-//!                  (`g<N>` for a GFM example)
+//! conformance          run all suites, regenerate the snapshots
+//! conformance <N>      print input/expected/actual for CommonMark example N
+//!                      (`g<N>` for a GFM example)
+//! conformance --clone  fetch the suite files only, do not run
+//! conformance --clean  remove the fetched suite files
 //! ```
 //!
 //! The run fails (exit 1) when results change in either direction versus the
 //! committed snapshot — a previously failing example that starts passing is
 //! also a change that must be reviewed and committed.
 //!
-//! The suite file is fetched by `just conformance-clone` into
-//! `tasks/conformance/repos/`.
+//! Suite files are pinned by URL (`SUITES`) and fetched with `curl` into
+//! `tasks/conformance/repos/` on first run; a bumped pin refetches.
 
 use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
-use std::path::Path;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use cow_utils::CowUtils;
 
 use oxc_markdown_parser::{Allocator, Constructs, Parser, ParserOptions};
+
+/// An upstream suite file, pinned to a fixed version.
+struct Suite {
+    /// File name under `tasks/conformance/repos/`.
+    file: &'static str,
+    /// Pinned URL. Bump deliberately to ingest upstream changes.
+    url: &'static str,
+}
+
+const SUITES: [Suite; 2] = [
+    Suite { file: "commonmark-spec.json", url: "https://spec.commonmark.org/0.31.2/spec.json" },
+    Suite {
+        file: "gfm-spec.txt",
+        url: "https://raw.githubusercontent.com/github/cmark-gfm/499789b49373bfa045d0e7547e5ee63444c77bca/test/spec.txt",
+    },
+];
+
+fn repos_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("repos")
+}
+
+/// Fetch a suite file unless the one on disk already came from the pinned URL.
+/// The URL is recorded in a `<file>.url` sidecar, so bumping the pin refetches.
+fn ensure_suite(suite: &Suite) -> io::Result<bool> {
+    let dir = repos_dir();
+    let path = dir.join(suite.file);
+    let url_path = dir.join(format!("{}.url", suite.file));
+    if path.is_file() && std::fs::read_to_string(&url_path).is_ok_and(|u| u == suite.url) {
+        return Ok(false);
+    }
+    std::fs::create_dir_all(&dir)?;
+    let output = Command::new("curl").args(["-fsSL", suite.url, "-o"]).arg(&path).output()?;
+    if !output.status.success() {
+        return Err(io::Error::other(format!(
+            "`curl {}` failed: {}",
+            suite.url,
+            String::from_utf8_lossy(&output.stderr).trim()
+        )));
+    }
+    std::fs::write(&url_path, suite.url)?;
+    Ok(true)
+}
 
 struct Example {
     number: u64,
@@ -38,19 +84,46 @@ struct Example {
 }
 
 fn main() {
-    let arg = std::env::args().nth(1);
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let clean = args.iter().any(|a| a == "--clean");
+    let clone_only = args.iter().any(|a| a == "--clone");
+    let arg = args.iter().find(|a| !a.starts_with('-'));
+
+    if clean {
+        let dir = repos_dir();
+        match std::fs::remove_dir_all(&dir) {
+            Ok(()) => println!("removed {}", dir.display()),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => println!("nothing to remove"),
+            Err(e) => eprintln!("failed to remove {}: {e}", dir.display()),
+        }
+        return;
+    }
+
+    let mut fetch_failed = false;
+    for suite in &SUITES {
+        print!("{:<22} ", suite.file);
+        io::stdout().flush().ok();
+        match ensure_suite(suite) {
+            Ok(true) => println!("fetched"),
+            Ok(false) => println!("up-to-date"),
+            Err(e) => {
+                println!("ERROR: {e}");
+                fetch_failed = true;
+            }
+        }
+    }
+    if fetch_failed {
+        eprintln!("\none or more fetches failed (network?); re-run to retry.");
+        std::process::exit(1);
+    }
+    if clone_only {
+        return;
+    }
 
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let spec_path = manifest.join("repos/commonmark-spec.json");
-    let Ok(spec) = std::fs::read_to_string(&spec_path) else {
-        eprintln!("missing {}; run `just conformance-clone` first", spec_path.display());
-        std::process::exit(1);
-    };
-    let examples = parse_spec(&spec);
-
-    let gfm_path = manifest.join("repos/gfm-spec.txt");
-    let gfm_examples =
-        std::fs::read_to_string(&gfm_path).map(|text| parse_spec_txt(&text)).unwrap_or_default();
+    let read = |suite: &Suite| std::fs::read_to_string(repos_dir().join(suite.file)).unwrap();
+    let examples = parse_spec(&read(&SUITES[0]));
+    let gfm_examples = parse_spec_txt(&read(&SUITES[1]));
 
     if let Some(arg) = arg {
         // Accept the snapshot's `#N` spelling as well as bare `N`.
@@ -80,17 +153,13 @@ fn main() {
         &snap_dir.join("commonmark.snap"),
         as_is,
     );
-    if gfm_examples.is_empty() {
-        eprintln!("missing {}; run `just conformance-clone` for the GFM suite", gfm_path.display());
-    } else {
-        failed |= run_suite(
-            "gfm spec (extensions)",
-            &gfm_examples,
-            gfm_options(),
-            &snap_dir.join("gfm.snap"),
-            canonicalize_gfm,
-        );
-    }
+    failed |= run_suite(
+        "gfm spec (extensions)",
+        &gfm_examples,
+        gfm_options(),
+        &snap_dir.join("gfm.snap"),
+        canonicalize_gfm,
+    );
     if failed {
         std::process::exit(1);
     }

@@ -85,7 +85,7 @@ const codeIndent = new RegExp(String.raw`^${indent4}${nonBlank}`, "m");
 // An attempt fails when no line after the opener ends with its closer, or
 // when a container-start line (which interrupts the non-`concrete`
 // construct) comes first. The exemption also requires a block-ish line
-// after the failed opener (the thing the corrupted state mis-parses), to
+// after the failed opener (the thing the corrupted state misparses), to
 // keep its blast radius small.
 const LIQUID_DELIMS: Array<[RegExp, RegExp]> = [
   [/^[ \t]{0,3}\{%/gm, /%\}[ \t]*\r?$/gm],

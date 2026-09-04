@@ -88,7 +88,7 @@ Shared grammar lives once, in `src/syntax/`:
 | `just differential [count] [seed]` | structural fuzz against mdast (micromark in the Prettier composition) |
 | `just fuzz-panic` | multibyte / boundary char soups, any panic fails |
 
-First run: `just conformance-clone`, and `npm i` in `tasks/differential`.
+First run: `npm i` in `tasks/differential`; `just conformance` fetches its suite files itself.
 
 - The HTML suites never see spans, segment padding, lazy lines or reference kinds.
   `tests/fixtures/**/*.md` pins that layer: small per-construct files (`block/`, `inline/`, `hazards/`), one compact tree each.

@@ -179,7 +179,7 @@ a
 Prettier's own `micromark-extension-liquid` (vendored here).
 A `{%` / `{{` line whose flow attempt fails leaves micromark's interrupt bookkeeping set,
 so after the next leaf construct the following line is still parsed under the paragraph-interrupt restrictions.
-Prettier 3.9+ mis-parses these the same way; we parse the line as the block start it is.
+Prettier 3.9+ misparses these the same way; we parse the line as the block start it is.
 Prettier prints `2)` as paragraph text.
 The `2)` line ends with two spaces.
 `decided by: accident (the interrupt flag outlives the failed attempt); the extension is the norm`

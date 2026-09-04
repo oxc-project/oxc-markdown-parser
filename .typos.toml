@@ -6,9 +6,5 @@ extend-exclude = [
 ]
 
 [default.extend-words]
-# Provisional-node type in inline/emphasis.rs
+# Provisional-node type in inline/
 pn = "pn"
-# "mis-parses"
-mis = "mis"
-# micromark's test name, quoted in DIVERGENCES.md
-lazyness = "lazyness"

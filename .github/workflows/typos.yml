@@ -1,0 +1,27 @@
+name: Spell Check
+
+permissions: {}
+
+# No path filter: docs-only changes are exactly what this must catch,
+# and ci.yml skips `*.md`.
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize]
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
+
+jobs:
+  typos:
+    name: Spell Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: crate-ci/typos@4d9c206a77c041268485162b8e2579ad7a5cb9a3 # v1.50.0
+        with:
+          files: .

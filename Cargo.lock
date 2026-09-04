@@ -181,9 +181,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_allocator"
-version = "0.144.0"
+version = "0.148.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9262c7bbd58c8c32c2c60d1a7b6c274cd2aeaff1b726a2fb86081b75084698cb"
+checksum = "4721a6dea1ed51a31597a8865aac718c89ac6d6c91e1d67d1f632078a0518d97"
 dependencies = [
  "allocator-api2",
  "hashbrown",
@@ -193,9 +193,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_data_structures"
-version = "0.144.0"
+version = "0.148.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a71efea56db93d3ce9e88e1d9f74f6d50fc2b06092444cdd08579f5827fd8db"
+checksum = "bbe5adfd511d39d3619ce02317368553c79aa290abf1acaf0b4525cec9594e94"
 
 [[package]]
 name = "proc-macro2"

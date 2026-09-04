@@ -1,0 +1,73 @@
+name: Differential
+
+permissions: {}
+
+# Only parser behavior and the runner itself can change the outcome,
+# so skip on CI-only, docs, or fixture edits.
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - "crates/oxc_markdown_parser/src/**"
+      - "tasks/render/**"
+      - "tasks/differential/**"
+      - "**/Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".github/workflows/differential.yml"
+  push:
+    branches:
+      - main
+      - "renovate/**"
+    paths:
+      - "crates/oxc_markdown_parser/src/**"
+      - "tasks/render/**"
+      - "tasks/differential/**"
+      - "**/Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".github/workflows/differential.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  differential:
+    name: Differential
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+      # The runners are `.ts` executed via Node's type stripping (>= 22.18).
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tasks/differential/package-lock.json
+      - name: Check Node supports type stripping (>= 22.18)
+        run: node -e "const [maj, min] = process.versions.node.split('.').map(Number); if (maj < 22 || (maj === 22 && min < 18)) { console.error('Node >= 22.18 required, got ' + process.version); process.exit(1); }"
+      # The oracle is data-only; refuse lifecycle scripts so a future
+      # transitive dependency cannot run code at install time.
+      - name: Install mdast oracle
+        run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: tasks/differential
+      # Counts mirror the justfile defaults (`just differential` / `just fuzz-panic`);
+      # several seeds, since the shape-based exemptions are only as good as the corpus that hit them.
+      - name: Differential fuzz vs mdast
+        run: |
+          for seed in 0 1 2; do
+            node tasks/differential/run.ts 5000 $seed
+          done
+      - name: Panic-safety fuzz
+        run: node tasks/differential/panic.ts 10000 0
