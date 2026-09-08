@@ -8,8 +8,8 @@
 use std::borrow::Cow;
 
 use super::entities;
-use crate::pos::Segment;
 use crate::syntax::escapes_next;
+use crate::{ast::Destination, pos::Segment};
 
 /// Decodes backslash escapes and entities.
 /// `escapes: false` decodes only entities
@@ -92,8 +92,10 @@ pub fn title(source: &str, pieces: &[Segment]) -> String {
     decode(&joined[1..joined.len() - 1], true).into_owned()
 }
 
-/// Inline HTML as micromark emits it:
-/// the pieces joined with `\n`, continuation lines minus up to 3 columns of leading whitespace.
+/// Inline HTML as micromark's HTML compiler emits it.
+///
+/// The pieces joined with `\n`, continuation lines minus up to 3 columns of leading whitespace.
+/// For the mdast `value` (what a formatter prints) use [`Segment::join`]: it keeps that whitespace.
 pub fn html_inline(source: &str, pieces: &[Segment]) -> String {
     join_stripped(source, pieces, 3)
 }
@@ -127,6 +129,14 @@ fn join_stripped(source: &str, pieces: &[Segment], max: usize) -> String {
         out.push_str(text);
     }
     out
+}
+
+/// The cooked value of a link, image or definition destination (mdast's `url`):
+/// angle brackets stripped, escapes and entities decoded.
+pub fn destination<'s>(source: &'s str, destination: &Destination) -> Cow<'s, str> {
+    let raw = destination.span.slice(source);
+    let raw = if destination.angle_bracketed { &raw[1..raw.len() - 1] } else { raw };
+    decode(raw, true)
 }
 
 #[cfg(test)]
