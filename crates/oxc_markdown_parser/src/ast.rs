@@ -470,9 +470,8 @@ pub struct AutolinkLiteral {
 /// The tag is a verbatim token; text around it is markdown.
 #[derive(Debug)]
 pub struct HtmlInline<'a> {
-    /// Verbatim content, one segment per line.
-    /// Continuation pieces keep their leading whitespace raw
-    /// (micromark strips up to 3 columns).
+    /// Verbatim content, one segment per line, leading whitespace of continuation lines included
+    /// (what mdast's `html.value` holds; only micromark's HTML compiler strips up to 3 columns of it).
     pub pieces: ArenaVec<'a, Segment>,
     pub span: Span,
 }

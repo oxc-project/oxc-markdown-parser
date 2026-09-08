@@ -33,7 +33,7 @@ pub use options::{Constructs, ParserOptions};
 pub use oxc_allocator::Allocator;
 pub use parser::{Parser, ParserReturn};
 pub use pos::{Segment, Span};
-pub use syntax::{decode, label};
+pub use syntax::{decode, label, unicode};
 
 /// Size regression guards, in the spirit of oxc_ast's generated assertions:
 /// enums stay pointer-sized-plus-tag, and hot node types stay small.
