@@ -200,6 +200,15 @@ impl<'s> Engine<'s> {
             self.hand_back_line_ending(false);
             self.close_from(matched);
         }
+        // The line belongs to the innermost blockquote whose `>` it carries
+        // (micromark's blockquote position covers it; the blank table alone would make
+        // a `>` line at the end of a list item look like a gap after the item).
+        if let Some(end) = self.stack[..matched].iter_mut().rev().find_map(|c| match c {
+            OpenContainer::Quote { end, .. } => Some(end),
+            _ => None,
+        }) {
+            *end = (*end).max(content_end);
+        }
         let blank = Span::new(cur.offset(), content_end);
         self.blanks.all.push(blank);
         // A blank line whose innermost container is a blockquote (`>` alone)
