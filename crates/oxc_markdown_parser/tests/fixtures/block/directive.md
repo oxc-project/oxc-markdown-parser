@@ -5,6 +5,17 @@ inner
 nested
 ::::
 :::
-:::	not
+:::	tab
+x
+:::
+:::)
+::: tip Custom Title
+loose opener
+:::
+::::tip Custom Title
+::: {.class}
+inner
+:::
+::::
 ::: unclosed
 x

@@ -70,6 +70,8 @@ const astral = String.raw`[\u{10000}-\u{10FFFF}]`;
 const marker = String.raw`(?:[-+*]|\d{1,9}[.)])`;
 // A container opener with its marker whitespace (a bare `>` needs none).
 const containerOpener = String.raw`[ \t]{0,3}(?:>|${marker}[ \t])`;
+// Any run of container prefixes at a line start (blockquotes, list items, footnote definitions).
+const containerPrefix = String.raw`^(?:[ \t>]|${marker}[ \t]|\[\^[^\]\n]*\]:[ \t]*)*`;
 // A list marker and what ends it, the line's end spelled out so a shape
 // without the `m` flag (where `^` must mean document start) can use it.
 const listMarker = String.raw`${marker}(?:[ \t]|\r?\n|$)`;
@@ -120,8 +122,22 @@ function failedLiquid(text: string): boolean {
 
 // The directive extension's factoryName treats tabs (a negative code) and
 // astral characters (surrogates) as name characters: holes in its Unicode
-// predicates. We classify both properly.
-const directiveTabName = new RegExp(String.raw`^[ \t]{0,3}:{3,}${nonBlank}*(?:\t|${astral})`, "mu");
+// predicates. A name made only of tabs is whitespace to us, an astral symbol punctuation.
+const directiveTabOrAstralName = new RegExp(
+  String.raw`${containerPrefix}:{3,}[ \t]*(?:\t[ \t]*$|${astral})`,
+  "mu",
+);
+
+// Our opener is any name-like line after the colons (AGENTS.md "Dialects"):
+// anything but a bare micromark name (a space before it, text or punctuation after it,
+// a label / attributes block) opens a directive for us and a paragraph for micromark
+// unless the label / attributes happen to satisfy the extension's grammar.
+const nameLike = String.raw`[\p{L}\p{N}_{\[]`;
+const micromarkName = String.raw`[\p{L}\p{N}](?:[\p{L}\p{N}_-]*[\p{L}\p{N}])?`;
+const looseDirectiveOpener = new RegExp(
+  String.raw`${containerPrefix}:{3,}(?!${micromarkName}[ \t]*$)[ \t]*${nameLike}`,
+  "mu",
+);
 
 // A blank line inside a directive's content, itself inside a list item:
 // micromark's lazily tokenized sub-document leaks the blank line ending to
@@ -140,7 +156,7 @@ const directiveInterruptFn = /^[^\n]*\[\^[^\n]*\r?\n[ \t]{0,3}:{3,}/m;
 // A reference that precedes a definition sitting inside a directive's
 // (lazily subtokenized) content stays text in micromark's tree; we resolve
 // position-independently — so a `[` must precede the opener.
-const directiveOpenLine = /^[ \t]{0,3}:{3,}[^\s:]/gm;
+const directiveOpenLine = new RegExp(String.raw`^[ \t]{0,3}:{3,}[ \t]*${nameLike}`, "gmu");
 const defLine = /^[ \t>]*\[[^\]\n]*\]:/gm;
 
 function forwardRefToDefInDirective(text: string): boolean {
@@ -171,7 +187,7 @@ const codeAfterContainerClose = new RegExp(
 // info string that ends in whitespace: micromark's meta token keeps the
 // whitespace; our span ends at the last non-blank.
 const fenceMetaTrailing = new RegExp(
-  String.raw`^(?:[ \t>]|${marker}[ \t])*(?:\x60{3,}[^\x60\n]*|~{3,}[^\n]*|\${2,}[^$\n]*)${nonBlank}[ \t]+\r?$`,
+  String.raw`${containerPrefix}(?:\x60{3,}[^\x60\n]*|~{3,}[^\n]*|\${2,}[^$\n]*)${nonBlank}[ \t]+\r?$`,
   "m",
 );
 
@@ -209,7 +225,8 @@ const QUIRKS: Quirk[] = [
   ["list after indented code", (t) => listAfterIndentedCode.test(t)],
   ["list after a container opened on the same line", (t) => listAfterContainerOnLine.test(t)],
   ["liquid interrupt poisoning", failedLiquid],
-  ["directive tab name", (t) => directiveTabName.test(t)],
+  ["directive tab or astral name", (t) => directiveTabOrAstralName.test(t)],
+  ["loose directive opener", (t) => looseDirectiveOpener.test(t)],
   ["blank line in directive in item", (t) => blankInDirectiveInItem.test(t)],
   ["directive interrupt drops footnotes", (t) => directiveInterruptFn.test(t)],
   ["forward ref to def in directive", forwardRefToDefInDirective],

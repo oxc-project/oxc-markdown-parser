@@ -390,8 +390,8 @@ pub struct CodeSpan<'a> {
     /// Content between the backtick runs, one segment per line
     /// (a multi-line code span crosses container prefixes, so a single span can't cover it;
     /// a partially consumed tab leaves virtual spaces in `padding`).
-    /// The printer recomputes the minimum backtick run length from these,
-    /// and escapes `|` only inside table cells.
+    /// The printer recomputes the minimum backtick run length from these.
+    /// Inside a table cell a `|` is `\|` in the source and stays so (nothing to escape).
     pub pieces: ArenaVec<'a, Segment>,
     pub span: Span,
 }

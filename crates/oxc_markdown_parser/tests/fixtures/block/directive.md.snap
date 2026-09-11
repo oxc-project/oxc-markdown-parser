@@ -1,19 +1,28 @@
 ---
 source: crates/oxc_markdown_parser/tests/ast.rs
 ---
-Root [0..77]
+Root [0..175]
   ContainerDirective [0..49] opening=[0..22] ":::note[label]{.c k=v}" closing=[45..49] "::::"
     Paragraph [23..28]
       Text [23..28] "inner"
     ContainerDirective [30..44] opening=[30..37] "::::tip"
       Paragraph [38..44]
         Text [38..44] "nested"
-  Paragraph [50..76]
+  Paragraph [50..53]
     Text [50..53] ":::"
-    SoftBreak [54..54]
-    Text [54..61] ":::\tnot"
-    SoftBreak [62..62]
-    Text [62..74] "::: unclosed"
-    SoftBreak [75..75]
-    Text [75..76] "x"
+  ContainerDirective [54..67] opening=[54..61] ":::\ttab" closing=[64..67] ":::"
+    Paragraph [62..63]
+      Text [62..63] "x"
+  Paragraph [68..72]
+    Text [68..72] ":::)"
+  ContainerDirective [73..110] opening=[73..93] "::: tip Custom Title" closing=[107..110] ":::"
+    Paragraph [94..106]
+      Text [94..106] "loose opener"
+  ContainerDirective [111..159] opening=[111..131] "::::tip Custom Title" closing=[155..159] "::::"
+    ContainerDirective [132..154] opening=[132..144] "::: {.class}" closing=[151..154] ":::"
+      Paragraph [145..150]
+        Text [145..150] "inner"
+  ContainerDirective [160..174] opening=[160..172] "::: unclosed"
+    Paragraph [173..174]
+      Text [173..174] "x"
 blanks: [29..29]
