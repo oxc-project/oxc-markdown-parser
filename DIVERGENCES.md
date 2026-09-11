@@ -204,26 +204,52 @@ The `2)` line ends with two spaces.
 </ol>
 ```
 
-## Directive names accept tabs and astral characters
+## Container directive openers accept any name-like line
 
-`micromark-extension-directive` tests tabs (a negative code in micromark) with Unicode predicates guarded by `code > -1`,
-so a tab counts as a name character; an astral character is a surrogate to the same predicates, so `:::😀` is a directive too.
-We treat the tab as whitespace and the astral symbol as punctuation, per the extension's documented grammar.
-Prettier has no directive construct.
-The input has a tab after `:::`.
-`decided by: accident (negative codes and surrogates in the Unicode predicates); the extension's grammar is the norm`
-`runner: directive tab name`
+`micromark-extension-directive` opens a container only on `:::name`, optionally followed by `[label]` and `{attributes}`,
+with nothing between the colons and the name and nothing after the attributes.
+Our opener is 3+ colons, optional spaces / tabs, then an alphanumeric, `_`, `{` or `[` and anything to the end of the line:
+that covers the VitePress / markdown-it-container form (`::: tip Custom Title`) and Pandoc's fenced div (`::: {.class}`),
+which micromark reads as paragraphs.
+The fence line is verbatim in the AST, so no dialect grammar is parsed; a bare `:::` or `:::)` is still not an opener.
+Prettier has no directive construct (#19662 would add micromark's).
+`decided by: AGENTS.md "Dialects" (the one construct whose fence line is kept verbatim)`
+`runner: loose directive opener`
 
 ~~~~markdown
-:::	a
+::: tip Custom Title
+x
+:::
+~~~~
+
+```html
+<!-- micromark: one paragraph -->
+<p>::: tip Custom Title
+x
+:::</p>
+<!-- ours: a container directive holding the paragraph -->
+<p>x</p>
+```
+
+## Directive names accept tabs and astral characters
+
+`micromark-extension-directive` tests tabs (a negative code in micromark) and astral characters (surrogates)
+with Unicode predicates guarded by `code > -1`, so a tab counts as a name character and `:::😀` is a directive too.
+We skip tabs after the colons (a name made only of tabs is no opener) and take an astral symbol as punctuation.
+Prettier has no directive construct.
+`decided by: accident (negative codes and surrogates in the Unicode predicates); the extension's grammar is the norm`
+`runner: directive tab or astral name`
+
+~~~~markdown
+:::😀
 x
 ~~~~
 
 ```html
-<!-- micromark: a container directive named "\t", holding the paragraph -->
+<!-- micromark: a container directive named "😀", holding the paragraph -->
 <p>x</p>
 <!-- ours: no directive, one paragraph -->
-<p>:::	a
+<p>:::😀
 x</p>
 ```
 

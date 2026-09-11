@@ -33,6 +33,25 @@ Overrides, decided before question 3:
 
 When in doubt, keep: a drop needs grounds, a keep does not.
 
+## Dialects
+
+Markdown grammars are open-ended (VitePress, Docusaurus, Pandoc, kramdown, Obsidian, ...);
+this parser does not learn them, and takes no list of plugins or flavors.
+
+A construct is added only when:
+
+- micromark, or a Prettier extension, parses it (the oracle set),
+- or GitHub renders it (GFM, alerts).
+
+Everything else is the formatter's problem, solved without grammar:
+plain text is never escaped, and a fixed list of line shapes keeps its source line boundaries.
+`lexical::line_start` is the parser's half of that contract.
+
+One exception: the `:::` container directive's opening line.
+The construct is in the oracle set (micromark-extension-directive), but its fence line is kept verbatim
+(dialects disagree on what follows the colons: `:::name[label]{attrs}`, `::: name title`, `::: {.class}`),
+so the opener accepts any name-like start instead of one grammar (`DIVERGENCES.md` "Container directive openers").
+
 ## Architecture
 
 Two phases, three steps:

@@ -8,6 +8,7 @@
 - Values are not cooked: consumers slice the original source through spans.
 - MD and MDX are the same parser with construct toggles (`Constructs`); the API always returns `(root, diagnostics)`, and diagnostics are structurally empty in MD mode.
 - Prettier's extensions (math, liquid, wiki links) and `:::` container directives are supported and enabled by default.
+  Directive fence lines are kept verbatim, so the VitePress / markdown-it-container (`::: tip Title`) and Pandoc (`::: {.class}`) forms open one too.
 
 ## Example
 
