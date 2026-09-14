@@ -32,9 +32,10 @@ pub enum LineStart {
     HtmlBlock,
     MathFence,
     Liquid,
-    /// A directive fence line: an opening fence (`:::name…`),
-    /// or a bare closing run (`:::`) that would close an open directive.
-    DirectiveFence,
+    /// A directive opening fence (`:::name…`): opens a container, interrupts a paragraph.
+    DirectiveOpener,
+    /// A bare `:::` run: closes an open directive, inert otherwise.
+    DirectiveCloser,
     FootnoteDefinition,
     ListItem,
     /// Only reported with `in_paragraph`
@@ -42,6 +43,12 @@ pub enum LineStart {
     TableDelimiterRow,
     /// A `|`-initiated line: a row if a table is open or forming.
     TableRow,
+}
+
+/// The number of an ordered list marker (`123.` / `123)`), for a printer that renumbers.
+/// CommonMark caps markers at 9 digits, so the value always fits; `None` for a bullet.
+pub fn ordered_number(marker: &str) -> Option<u32> {
+    marker.trim_end_matches(['.', ')']).parse().ok()
 }
 
 /// Classifies what `line` (one line, no line ending) would start as a block,
@@ -68,7 +75,7 @@ pub fn line_start(constructs: &Constructs, line: &str, in_paragraph: bool) -> Op
             Start::Html { .. } => LineStart::HtmlBlock,
             Start::MathFence { .. } => LineStart::MathFence,
             Start::Liquid => LineStart::Liquid,
-            Start::Directive { .. } => LineStart::DirectiveFence,
+            Start::Directive { .. } => LineStart::DirectiveOpener,
             Start::FootnoteDef { .. } => LineStart::FootnoteDefinition,
             Start::ListItem { .. } => LineStart::ListItem,
             Start::TableDelimiter(_) => LineStart::TableDelimiterRow,
@@ -78,7 +85,7 @@ pub fn line_start(constructs: &Constructs, line: &str, in_paragraph: bool) -> Op
     // line shapes that are inert on their own but significant next to an open construct.
     // Exactly what a formatter must not create by joining lines.
     if constructs.container_directive && scan::fence_close(tail, b':', 3) {
-        return Some(LineStart::DirectiveFence);
+        return Some(LineStart::DirectiveCloser);
     }
     if constructs.gfm_table && tail.starts_with('|') {
         return Some(LineStart::TableRow);
@@ -110,10 +117,18 @@ mod tests {
     }
 
     #[test]
+    fn ordered_numbers() {
+        assert_eq!(ordered_number("007."), Some(7));
+        assert_eq!(ordered_number("999999999)"), Some(999_999_999));
+        assert_eq!(ordered_number("-"), None);
+    }
+
+    #[test]
     fn covers_prettiers_documented_misses() {
         // The regex holes behind Blume's directive corruption and #19847.
-        assert_eq!(md(":::note", false), Some(LineStart::DirectiveFence));
-        assert_eq!(md(":::", false), Some(LineStart::DirectiveFence));
+        assert_eq!(md(":::note", false), Some(LineStart::DirectiveOpener));
+        assert_eq!(md(":::", false), Some(LineStart::DirectiveCloser));
+        assert_eq!(md(":::)", false), None, "an emoticon is paragraph text");
         assert_eq!(md("| - | - |", true), Some(LineStart::TableDelimiterRow));
         assert_eq!(md("| a | b |", false), Some(LineStart::TableRow));
     }

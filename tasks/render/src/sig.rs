@@ -13,9 +13,9 @@ use std::fmt::Write;
 
 use oxc_markdown_parser::ast::*;
 use oxc_markdown_parser::decode::{self, decode};
-use oxc_markdown_parser::{Segment, Span, label};
+use oxc_markdown_parser::{Segment, Span, label, lexical};
 
-use crate::{destination_text, ordered_start, split_info, strip_delims};
+use crate::{destination_text, strip_delims};
 
 pub fn signature(source: &str, root: &Root<'_>) -> String {
     let mut s = Sig {
@@ -144,8 +144,10 @@ impl<'s> Sig<'s> {
             Block::ThematicBreak(_) => self.out.push_str("hr"),
             Block::CodeBlock(c) => {
                 let (lang, meta) = match c.kind {
-                    CodeBlockKind::Fenced { info: Some(info), .. } => split_info(self.slice(info)),
-                    _ => ("", ""),
+                    CodeBlockKind::Fenced { lang, meta, .. } => {
+                        (lang.map_or("", |s| self.slice(s)), meta.map_or("", |s| self.slice(s)))
+                    }
+                    CodeBlockKind::Indented => ("", ""),
                 };
                 let (lang, meta) = (decode(lang, true), decode(meta, true));
                 let value = self.join(&c.lines);
@@ -168,7 +170,7 @@ impl<'s> Sig<'s> {
                     .children
                     .first()
                     .filter(|_| ordered)
-                    .and_then(|item| ordered_start(item.marker, self.source))
+                    .and_then(|item| lexical::ordered_number(item.marker.slice(self.source)))
                     .map_or(String::new(), |n| n.to_string());
                 let _ = write!(self.out, "list{{{ordered},{start},spread={}}}[", !l.tight);
                 for item in &l.children {

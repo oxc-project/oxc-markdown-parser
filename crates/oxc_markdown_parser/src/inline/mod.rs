@@ -9,8 +9,7 @@
 //! every emitted span goes through its exact per-byte map back to source offsets.
 
 mod autolink;
-mod emphasis;
-pub use emphasis::classify as attention;
+pub mod emphasis;
 mod gfm_autolink;
 mod html;
 pub mod input;
@@ -47,7 +46,7 @@ pub enum PN {
     WikiLink(Range<usize>),
     Liquid(Range<usize>),
     Emph { marker: u8, strong: bool, children: Vec<PN>, r: Range<usize> },
-    Link { image: bool, kind: PLinkKind, children: Vec<PN>, r: Range<usize> },
+    Link { image: bool, kind: PLinkKind, children: Vec<PN>, text: Range<usize>, r: Range<usize> },
 }
 
 pub enum PLinkKind {
@@ -527,7 +526,7 @@ fn push_ast<'a>(
                 );
             }
         }
-        PN::Link { image, kind, children, r } => {
+        PN::Link { image, kind, children, text, r } => {
             let mut inner = ArenaVec::new_in(&allocator);
             for child in children {
                 push_ast(allocator, input, child, &mut inner);
@@ -546,7 +545,12 @@ fn push_ast<'a>(
                 push(
                     out,
                     Inline::Image(ArenaBox::new_in(
-                        Image { kind, children: inner, span },
+                        Image {
+                            kind,
+                            alt: input.pieces_in(text, allocator),
+                            children: inner,
+                            span,
+                        },
                         &allocator,
                     )),
                 );

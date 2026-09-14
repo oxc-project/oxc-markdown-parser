@@ -4,14 +4,17 @@ source: crates/oxc_markdown_parser/tests/ast.rs
 Root [0..61]
   Paragraph [0..43]
     Image [0..8] kind=inline dest=[5..7] "/u" angle=false
+      alt[0] [2..3] "a"
       Text [2..3] "a"
     Text [8..9] " "
     Image [9..30] kind=inline dest=[27..29] "/f" angle=false
+      alt[0] [11..25] "b *c* ![d](/e)"
       Text [11..13] "b "
       Emphasis [13..16] marker=*
         Text [14..15] "c"
       Text [16..17] " "
       Image [17..25] kind=inline dest=[22..24] "/e" angle=false
+        alt[0] [19..20] "d"
         Text [19..20] "d"
     SoftBreak [31..31]
     Text [31..32] "!"
@@ -19,6 +22,7 @@ Root [0..61]
     Text [36..37] " "
     Image [37..43] kind=collapsed
       label[0] [39..40] "g"
+      alt[0] [39..40] "g"
       Text [39..40] "g"
   Definition [45..52] dest=[50..52] "/g" angle=false
     label[0] [46..47] "g"

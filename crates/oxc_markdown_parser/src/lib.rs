@@ -28,12 +28,17 @@ mod syntax;
 
 pub use block::lexical;
 pub use diagnostic::{Diagnostic, DiagnosticKind};
-pub use inline::{LiteralKind, attention, literal_kind};
+pub use inline::{LiteralKind, literal_kind};
+
+/// The delimiter-run rules a printer needs: flanking and pairing, the parser's own.
+pub mod attention {
+    pub use crate::inline::emphasis::{Pair, Run, classify, pairs};
+}
 pub use options::{Constructs, ParserOptions};
 pub use oxc_allocator::Allocator;
 pub use parser::{Parser, ParserReturn};
 pub use pos::{Segment, Span};
-pub use syntax::{decode, label, unicode};
+pub use syntax::{decode, escapes_next, label, unicode};
 
 /// Size regression guards, in the spirit of oxc_ast's generated assertions:
 /// enums stay pointer-sized-plus-tag, and hot node types stay small.

@@ -183,9 +183,10 @@ pub enum CodeBlockKind {
     Fenced {
         /// `` ` `` or `~`.
         fence: u8,
-        /// Raw info string, if any.
-        /// Used both for language dispatch and verbatim output.
-        info: Option<Span>,
+        /// The info string's first word (mdast `lang`), if any.
+        lang: Option<Span>,
+        /// The rest of the info string after `lang` and the whitespace (mdast `meta`), if any.
+        meta: Option<Span>,
     },
     /// Preserved as indented (never converted to fenced).
     Indented,
@@ -408,7 +409,10 @@ pub struct Link<'a> {
 #[derive(Debug)]
 pub struct Image<'a> {
     pub kind: LinkKind<'a>,
-    /// The alt text.
+    /// The raw text between `![` and `]`, as logical-line pieces
+    /// (a printer reproduces it as written; mdast cooks it to `alt`).
+    pub alt: ArenaVec<'a, Segment>,
+    /// The alt text parsed as inline content.
     /// Nested link/image syntax is preserved here, not cooked.
     pub children: ArenaVec<'a, Inline<'a>>,
     pub span: Span,

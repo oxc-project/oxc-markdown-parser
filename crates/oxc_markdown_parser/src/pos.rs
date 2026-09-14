@@ -27,6 +27,11 @@ impl Span {
         Self { start: at, end: at }
     }
 
+    /// Whether `offset` lies inside the span (`start <= offset < end`).
+    pub fn contains(self, offset: u32) -> bool {
+        self.start <= offset && offset < self.end
+    }
+
     /// A span for an in-line byte range relative to `base`.
     #[expect(clippy::cast_possible_truncation)] // in-line ranges
     pub fn at(base: u32, range: Range<usize>) -> Self {

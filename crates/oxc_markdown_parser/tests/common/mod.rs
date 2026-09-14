@@ -65,9 +65,10 @@ fn walk_block(block: &Block<'_>, v: &mut impl Visitor) {
         Block::CodeBlock(n) => {
             let CodeBlock { kind, lines, span } = &**n;
             let mut facts = match *kind {
-                CodeBlockKind::Fenced { fence, info } => {
+                CodeBlockKind::Fenced { fence, lang, meta } => {
                     let mut facts = vec![Fact::Str("fence", (fence as char).to_string())];
-                    facts.extend(optional("info", info));
+                    facts.extend(optional("lang", lang));
+                    facts.extend(optional("meta", meta));
                     facts
                 }
                 CodeBlockKind::Indented => vec![Fact::Str("kind", "indented".into())],
@@ -253,8 +254,10 @@ fn walk_inline(inline: &Inline<'_>, v: &mut impl Visitor) {
             walk_inlines(children, v);
         }
         Inline::Image(n) => {
-            let Image { kind, children, span } = &**n;
-            v.enter("Image", *span, link_facts(kind));
+            let Image { kind, alt, children, span } = &**n;
+            let mut facts = link_facts(kind);
+            facts.push(Fact::Segments("alt", alt));
+            v.enter("Image", *span, facts);
             walk_inlines(children, v);
         }
         Inline::Autolink(Autolink { span, email }) => {
