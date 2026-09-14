@@ -45,7 +45,8 @@ A construct is added only when:
 
 Everything else is the formatter's problem, solved without grammar:
 plain text is never escaped, and a fixed list of line shapes keeps its source line boundaries.
-`lexical::line_start` (what a line would open) and `attention` (whether a `*` / `_` run pairs) are the parser's half of that contract.
+
+`lexical::line_start` (what a line would open) and `attention` (`classify`: whether a `*` / `_` run can open or close; `pairs`: which nodes a sequence of runs forms) are the parser's half of that contract.
 
 One exception: the `:::` container directive's opening line.
 The construct is in the oracle set (micromark-extension-directive), but its fence line is kept verbatim

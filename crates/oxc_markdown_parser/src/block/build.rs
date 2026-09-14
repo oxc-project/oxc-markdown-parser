@@ -82,7 +82,22 @@ impl<'a> Cx<'_, 'a> {
             Ir::ThematicBreak { span } => Block::ThematicBreak(ThematicBreak { span }),
             Ir::Code { fenced, lines, span } => {
                 let kind = match fenced {
-                    Some((fence, info)) => CodeBlockKind::Fenced { fence, info },
+                    Some((fence, info)) => {
+                        let (lang, meta) = info.map_or((None, None), |info| {
+                            // As micromark tokenizes it: the language up to the first space / tab,
+                            // the meta after the whitespace run
+                            let raw = info.slice(self.source);
+                            let (lang, rest) = raw.split_once([' ', '\t']).unwrap_or((raw, ""));
+                            let meta = rest.trim_start_matches([' ', '\t']);
+                            (
+                                Some(Span::at(info.start, 0..lang.len())),
+                                (!meta.is_empty()).then(|| {
+                                    Span::at(info.start, raw.len() - meta.len()..raw.len())
+                                }),
+                            )
+                        });
+                        CodeBlockKind::Fenced { fence, lang, meta }
+                    }
                     None => CodeBlockKind::Indented,
                 };
                 let lines = ArenaVec::from_iter_in(lines, &self.allocator);

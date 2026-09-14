@@ -47,7 +47,7 @@ impl Tokenizer<'_, '_> {
         if self.t.as_bytes().get(p + 1) == Some(&b'(')
             && let Some((dest, angle_bracketed, title, end)) = scan_inline_suffix(self.t, p + 1)
         {
-            self.make_link(b, PLinkKind::Inline { dest, angle_bracketed, title }, end);
+            self.make_link(b, PLinkKind::Inline { dest, angle_bracketed, title }, p, end);
             return;
         }
 
@@ -63,6 +63,7 @@ impl Tokenizer<'_, '_> {
                     self.make_link(
                         b,
                         PLinkKind::Reference { kind: ReferenceKind::Collapsed, label: inner },
+                        p,
                         p + 3,
                     );
                     return;
@@ -77,6 +78,7 @@ impl Tokenizer<'_, '_> {
                 self.make_link(
                     b,
                     PLinkKind::Reference { kind: ReferenceKind::Full, label },
+                    p,
                     label_close,
                 );
                 return;
@@ -94,6 +96,7 @@ impl Tokenizer<'_, '_> {
             self.make_link(
                 b,
                 PLinkKind::Reference { kind: ReferenceKind::Shortcut, label: inner },
+                p,
                 p + 1,
             );
             return;
@@ -138,12 +141,18 @@ impl Tokenizer<'_, '_> {
         self.nodes.drain(from..).filter(|n| !matches!(n, PN::Text(r) if r.is_empty())).collect()
     }
 
-    fn make_link(&mut self, b: Bracket, kind: PLinkKind, end: usize) {
+    /// `close` is the position of the `]` ending the text, `end` the end of the whole construct.
+    fn make_link(&mut self, b: Bracket, kind: PLinkKind, close: usize, end: usize) {
         self.process_emphasis(b.delim_len);
         let inner = self.take_children(b.node + 1);
         self.delims.truncate(b.delim_len);
-        self.nodes[b.node] =
-            PN::Link { image: b.image, kind, children: inner, r: b.text_start..end };
+        self.nodes[b.node] = PN::Link {
+            image: b.image,
+            kind,
+            children: inner,
+            text: b.after_open()..close,
+            r: b.text_start..end,
+        };
         self.brackets.pop();
         if !b.image {
             for bracket in &mut self.brackets {

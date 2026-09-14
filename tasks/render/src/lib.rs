@@ -13,7 +13,7 @@ use std::fmt::Write as _;
 use cow_utils::CowUtils;
 use rustc_hash::FxHashMap;
 
-use oxc_markdown_parser::{Segment, Span, ast::*, decode, label};
+use oxc_markdown_parser::{Segment, Span, ast::*, decode, label, lexical};
 
 pub fn render<'s>(source: &'s str, root: &'s Root<'_>) -> String {
     let mut defs = FxHashMap::default();
@@ -102,10 +102,9 @@ impl Renderer<'_> {
             Block::CodeBlock(c) => {
                 self.cr();
                 self.out.push_str("<pre><code");
-                if let CodeBlockKind::Fenced { info: Some(info), .. } = c.kind {
-                    let (lang, _) = split_info(info.slice(self.source));
+                if let CodeBlockKind::Fenced { lang: Some(lang), .. } = c.kind {
                     self.out.push_str(" class=\"language-");
-                    self.out.push_str(&esc(&decode::decode(lang, true)));
+                    self.out.push_str(&esc(&decode::decode(lang.slice(self.source), true)));
                     self.out.push('"');
                 }
                 self.out.push('>');
@@ -145,7 +144,7 @@ impl Renderer<'_> {
                     let start = l
                         .children
                         .first()
-                        .and_then(|item| ordered_start(item.marker, self.source))
+                        .and_then(|item| lexical::ordered_number(item.marker.slice(self.source)))
                         .unwrap_or(1);
                     if start == 1 {
                         self.out.push_str("<ol>\n");
@@ -411,19 +410,6 @@ pub(crate) fn strip_delims(s: &str) -> &str {
 pub(crate) fn destination_text<'s>(source: &'s str, d: &Destination) -> Cow<'s, str> {
     let raw = d.span.slice(source);
     decode::decode(if d.angle_bracketed { strip_delims(raw) } else { raw }, true)
-}
-
-/// A fenced code info string split as micromark tokenizes it:
-/// the language up to the first space/tab, the meta after the whitespace run.
-/// Both raw; decode each separately, as micromark does.
-pub(crate) fn split_info(info: &str) -> (&str, &str) {
-    let (lang, rest) = info.split_once([' ', '\t']).unwrap_or((info, ""));
-    (lang, rest.trim_start_matches([' ', '\t']))
-}
-
-pub(crate) fn ordered_start(marker: Span, source: &str) -> Option<u64> {
-    let digits = marker.slice(source);
-    digits[..digits.len().saturating_sub(1)].parse().ok()
 }
 
 fn esc(s: &str) -> Cow<'_, str> {

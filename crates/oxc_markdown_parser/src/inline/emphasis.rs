@@ -17,7 +17,10 @@
 
 use std::ops::Range;
 
-use crate::syntax::unicode::{is_punctuation, is_whitespace};
+use crate::{
+    Constructs,
+    syntax::unicode::{is_punctuation, is_whitespace},
+};
 
 use super::link::Bracket;
 use super::{PN, Tokenizer};
@@ -37,36 +40,28 @@ impl Tokenizer<'_, '_> {
         let bytes = self.t.as_bytes();
         let marker = bytes[self.pos];
         let start = self.pos;
-        let run = bytes[start..].iter().take_while(|&&b| b == marker).count();
+        let len = bytes[start..].iter().take_while(|&&b| b == marker).count();
         let prev = self.t[..start].chars().next_back();
-        let next = self.t[start + run..].chars().next();
-        // GFM strikethrough: runs of one (only with `singleTilde`) or two tildes;
-        // longer runs never participate (micromark's construct fails on them).
-        let min = if self.constructs.gfm_strikethrough_single_tilde { 1 } else { 2 };
-        let valid_run = marker != b'~' || (min..=2).contains(&run);
-        let (can_open, can_close) = if valid_run {
-            classify(marker, prev, next, self.constructs.gfm_strikethrough)
-        } else {
-            (false, false)
-        };
+        let next = self.t[start + len..].chars().next();
+        let run = Run::new(marker, len, prev, next, self.constructs);
         self.flush_text(start);
-        self.nodes.push(PN::Text(start..start + run));
+        self.nodes.push(PN::Text(start..start + len));
         // micromark registers a family's resolver when its construct succeeds,
         // which is every `*`/`_` run and every valid-length `~` run,
         // regardless of whether the run can open or close.
-        if valid_run {
+        if run.valid {
             self.first_delim_tilde.get_or_insert(marker == b'~');
         }
-        if can_open || can_close {
+        if run.can_open || run.can_close {
             self.delims.push(Delim {
                 node: self.nodes.len() - 1,
                 marker,
-                remaining: run,
-                can_open,
-                can_close,
+                remaining: len,
+                can_open: run.can_open,
+                can_close: run.can_close,
             });
         }
-        self.pos = start + run;
+        self.pos = start + len;
         self.text_start = self.pos;
     }
 
@@ -246,6 +241,101 @@ fn text_range(nodes: &mut [PN], node: usize) -> &mut Range<usize> {
     }
 }
 
+/// A `*` / `_` / `~` run as the tokenizer sees it: its marker, length and flanking.
+/// Built by [`Run::new`], for [`pairs`] on a text a printer is about to emit.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Run {
+    pub marker: u8,
+    pub len: usize,
+    pub can_open: bool,
+    pub can_close: bool,
+    /// The run registers its family's resolver (every `*` / `_` run, a `~` run of a valid length).
+    pub valid: bool,
+}
+
+impl Run {
+    /// `prev` / `next` are the characters around the run (`None` at a boundary).
+    pub fn new(
+        marker: u8,
+        len: usize,
+        prev: Option<char>,
+        next: Option<char>,
+        constructs: &Constructs,
+    ) -> Self {
+        // GFM strikethrough: runs of one (only with `singleTilde`) or two tildes;
+        // longer runs never participate (micromark's construct fails on them).
+        let min = if constructs.gfm_strikethrough_single_tilde { 1 } else { 2 };
+        let valid = marker != b'~' || (min..=2).contains(&len);
+        let (can_open, can_close) = if valid {
+            classify(marker, prev, next, constructs.gfm_strikethrough)
+        } else {
+            (false, false)
+        };
+        Self { marker, len, can_open, can_close, valid }
+    }
+}
+
+/// One emphasis / strong / strikethrough node [`pairs`] would form: the runs' indices and its kind.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Pair {
+    pub opener: usize,
+    pub closer: usize,
+    /// Two characters of each `*` / `_` run (`**` / `__`); a `~` pair is strikethrough, never strong.
+    pub strong: bool,
+}
+
+/// The nodes the delimiter runs of one inline sequence form, sorted by position.
+///
+/// Decided by the parser's own resolver (flanking, rule of three, family order).
+/// The runs are those of one bracket level (`in_link`: a link's text resolves on its own,
+/// strikethrough first); text between them is opaque, only the runs' flanking matters.
+/// At the top level the family used first resolves first.
+///
+/// A printer that changes a marker or joins lines runs it on what it is about to emit
+/// and compares the result with the tree it prints, before committing to the change.
+pub fn pairs(runs: &[Run], in_link: bool) -> Vec<Pair> {
+    let tilde_first = in_link || runs.iter().find(|r| r.valid).is_some_and(|r| r.marker == b'~');
+    // Lay the runs out as text nodes with one opaque text node between neighbors
+    // (same-marker runs never touch; a pair always has a node between it).
+    let mut nodes = Vec::with_capacity(runs.len() * 2);
+    let mut delims = Vec::new();
+    let mut starts = Vec::with_capacity(runs.len());
+    let mut pos = 0;
+    for run in runs {
+        if !nodes.is_empty() {
+            nodes.push(PN::Text(pos..pos + 1));
+            pos += 1;
+        }
+        starts.push(pos);
+        if run.can_open || run.can_close {
+            delims.push(Delim {
+                node: nodes.len(),
+                marker: run.marker,
+                remaining: run.len,
+                can_open: run.can_open,
+                can_close: run.can_close,
+            });
+        }
+        nodes.push(PN::Text(pos..pos + run.len));
+        pos += run.len;
+    }
+    resolve(&mut nodes, &mut delims, &mut [], 0, tilde_first);
+    let mut out = Vec::new();
+    collect_pairs(&nodes, &starts, &mut out);
+    out.sort_unstable();
+    out
+}
+
+fn collect_pairs(nodes: &[PN], starts: &[usize], out: &mut Vec<Pair>) {
+    let run_at = |offset: usize| starts.partition_point(|&s| s <= offset) - 1;
+    for node in nodes {
+        if let PN::Emph { strong, children, r, .. } = node {
+            out.push(Pair { opener: run_at(r.start), closer: run_at(r.end - 1), strong: *strong });
+            collect_pairs(children, starts, out);
+        }
+    }
+}
+
 /// Flanking classification, micromark's `attention.js` version.
 ///
 /// This deliberately follows micromark rather than the spec's prose:
@@ -285,5 +375,62 @@ fn group(c: Option<char>) -> u8 {
         Some(c) if is_whitespace(c) => 1,
         Some(c) if is_punctuation(c) => 2,
         Some(_) => 0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn run(marker: u8, len: usize, prev: Option<char>, next: Option<char>) -> Run {
+        Run::new(marker, len, prev, next, &Constructs::markdown())
+    }
+
+    #[test]
+    fn pairs_nested_and_rule_of_three() {
+        // `***b***`: strong inside emphasis, both from the same two runs
+        let runs = [run(b'*', 3, None, Some('b')), run(b'*', 3, Some('b'), None)];
+        assert_eq!(
+            pairs(&runs, false),
+            vec![
+                Pair { opener: 0, closer: 1, strong: false },
+                Pair { opener: 0, closer: 1, strong: true }
+            ]
+        );
+        // `*a**b*`: the `**` cannot pair (rule of three), the outer pair forms
+        let runs = [
+            run(b'*', 1, None, Some('a')),
+            run(b'*', 2, Some('a'), Some('b')),
+            run(b'*', 1, Some('b'), None),
+        ];
+        assert_eq!(pairs(&runs, false), vec![Pair { opener: 0, closer: 2, strong: false }]);
+        // `**a _**b**_ c**` (micromark): `**a _` strong, then `**_ c**` strong
+        let runs = [
+            run(b'*', 2, None, Some('a')),
+            run(b'_', 1, Some(' '), Some('*')),
+            run(b'*', 2, Some('_'), Some('b')),
+            run(b'*', 2, Some('b'), Some('_')),
+            run(b'_', 1, Some('*'), Some(' ')),
+            run(b'*', 2, Some('c'), None),
+        ];
+        assert_eq!(
+            pairs(&runs, false),
+            vec![
+                Pair { opener: 0, closer: 2, strong: true },
+                Pair { opener: 3, closer: 5, strong: true }
+            ]
+        );
+    }
+
+    #[test]
+    fn pairs_family_order() {
+        // `~~*a~~*`: strikethrough first (its run comes first) swallows the `*` opener
+        let runs = [
+            run(b'~', 2, None, Some('*')),
+            run(b'*', 1, Some('~'), Some('a')),
+            run(b'~', 2, Some('a'), Some('*')),
+            run(b'*', 1, Some('~'), None),
+        ];
+        assert_eq!(pairs(&runs, true), vec![Pair { opener: 0, closer: 2, strong: false }]);
     }
 }
