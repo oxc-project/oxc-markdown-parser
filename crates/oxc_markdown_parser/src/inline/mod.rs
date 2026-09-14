@@ -10,6 +10,7 @@
 
 mod autolink;
 mod emphasis;
+pub use emphasis::classify as attention;
 mod gfm_autolink;
 mod html;
 pub mod input;

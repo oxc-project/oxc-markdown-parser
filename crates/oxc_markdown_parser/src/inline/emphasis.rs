@@ -255,7 +255,11 @@ fn text_range(nodes: &mut [PN], node: usize) -> &mut Range<usize> {
 /// A `~` run gets the plain attention rules,
 /// no marker relaxation, no `_` adjustment (micromark's `gfm-strikethrough`).
 /// Parse behavior targets micromark exactly, quirks included.
-fn classify(marker: u8, prev: Option<char>, next: Option<char>, tilde: bool) -> (bool, bool) {
+///
+/// `prev` / `next` are the characters around the run; `None` is a boundary (whitespace class).
+/// Returns `(can_open, can_close)`.
+/// Public as [`crate::attention`] for printers that must know whether a literal run they emit would pair up.
+pub fn classify(marker: u8, prev: Option<char>, next: Option<char>, tilde: bool) -> (bool, bool) {
     let is_marker = |c: Option<char>| {
         marker != b'~' && (matches!(c, Some('*' | '_')) || (tilde && c == Some('~')))
     };
