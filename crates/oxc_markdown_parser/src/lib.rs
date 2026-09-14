@@ -28,7 +28,7 @@ mod syntax;
 
 pub use block::lexical;
 pub use diagnostic::{Diagnostic, DiagnosticKind};
-pub use inline::{LiteralKind, literal_kind};
+pub use inline::{LiteralKind, attention, literal_kind};
 pub use options::{Constructs, ParserOptions};
 pub use oxc_allocator::Allocator;
 pub use parser::{Parser, ParserReturn};
