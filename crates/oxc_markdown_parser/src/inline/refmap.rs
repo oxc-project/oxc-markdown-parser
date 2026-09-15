@@ -7,6 +7,7 @@
 //!
 //! Sorted vecs, not hash sets: keeps the crate dependency-free,
 //! and definitions are few enough that binary search wins anyway.
+//! [`RefMap::finish`] sorts once, between the block and inline phases.
 
 #[derive(Default)]
 pub struct RefMap {
@@ -14,19 +15,20 @@ pub struct RefMap {
     footnotes: Vec<String>,
 }
 
-fn insert_sorted(labels: &mut Vec<String>, label: String) {
-    if let Err(at) = labels.binary_search(&label) {
-        labels.insert(at, label);
-    }
-}
-
 fn contains(labels: &[String], label: &str) -> bool {
     labels.binary_search_by(|l| l.as_str().cmp(label)).is_ok()
 }
 
 impl RefMap {
-    pub fn insert(&mut self, label: String) {
-        insert_sorted(&mut self.labels, label);
+    pub fn push(&mut self, label: String) {
+        self.labels.push(label);
+    }
+
+    pub fn finish(&mut self) {
+        for labels in [&mut self.labels, &mut self.footnotes] {
+            labels.sort_unstable();
+            labels.dedup();
+        }
     }
 
     pub fn contains(&self, label: &str) -> bool {
@@ -37,8 +39,8 @@ impl RefMap {
         self.labels.is_empty()
     }
 
-    pub fn insert_footnote(&mut self, label: String) {
-        insert_sorted(&mut self.footnotes, label);
+    pub fn push_footnote(&mut self, label: String) {
+        self.footnotes.push(label);
     }
 
     pub fn contains_footnote(&self, label: &str) -> bool {
@@ -58,10 +60,11 @@ mod tests {
     fn labels_and_footnotes_are_separate() {
         let mut map = RefMap::default();
         assert!(map.is_empty() && map.footnotes_is_empty());
-        map.insert("b".into());
-        map.insert("a".into());
-        map.insert("a".into());
-        map.insert_footnote("1".into());
+        map.push("b".into());
+        map.push("a".into());
+        map.push("a".into());
+        map.push_footnote("1".into());
+        map.finish();
         assert!(map.contains("a"));
         assert!(!map.contains("1"));
         assert!(map.contains_footnote("1"));

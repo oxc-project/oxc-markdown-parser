@@ -2,6 +2,8 @@
 
 use std::ops::Range;
 
+use crate::syntax::run_len;
+
 use super::trim_range;
 
 /// Opening math fence: 2+ `$`s, then meta text that must not contain `$`.
@@ -10,7 +12,7 @@ use super::trim_range;
 #[expect(clippy::cast_possible_truncation)] // fence runs fit in-line lengths
 pub fn math_fence_open(tail: &str) -> Option<(u32, Range<usize>)> {
     let bytes = tail.as_bytes();
-    let run = bytes.iter().take_while(|&&b| b == b'$').count();
+    let run = run_len(bytes, b'$');
     if run < 2 {
         return None;
     }

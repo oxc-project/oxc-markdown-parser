@@ -135,16 +135,15 @@ impl Tokenizer<'_, '_> {
         self.text_start = self.pos;
     }
 
-    /// Drains `nodes[from..]` (dropping delimiter text nodes emptied by emphasis processing)
-    /// as a new node's children.
-    pub(crate) fn take_children(&mut self, from: usize) -> Vec<PN> {
-        self.nodes.drain(from..).filter(|n| !matches!(n, PN::Text(r) if r.is_empty())).collect()
+    /// Resolves the emphasis of `delims[delim_bottom..]` and drains `nodes[from..]` as a tree.
+    fn close_children(&mut self, delim_bottom: usize, from: usize) -> Vec<PN> {
+        self.process_emphasis(delim_bottom);
+        super::emphasis::build(self.nodes.drain(from..), &mut self.formed)
     }
 
     /// `close` is the position of the `]` ending the text, `end` the end of the whole construct.
     fn make_link(&mut self, b: Bracket, kind: PLinkKind, close: usize, end: usize) {
-        self.process_emphasis(b.delim_len);
-        let inner = self.take_children(b.node + 1);
+        let inner = self.close_children(b.delim_len, b.node + 1);
         self.delims.truncate(b.delim_len);
         self.nodes[b.node] = PN::Link {
             image: b.image,

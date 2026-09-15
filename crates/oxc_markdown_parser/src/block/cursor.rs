@@ -11,6 +11,8 @@ use crate::pos::{Segment, Span};
 pub struct Cursor<'s> {
     line: &'s str,
     line_start: u32,
+    /// Byte length without trailing spaces / tabs, scanned once per line.
+    trimmed: usize,
     /// Byte position within the line.
     pub pos: usize,
     /// Logical column (tabs expanded).
@@ -21,7 +23,18 @@ pub struct Cursor<'s> {
 
 impl<'s> Cursor<'s> {
     pub fn new(line: &'s str, line_start: u32) -> Self {
-        Self { line, line_start, pos: 0, col: 0, partial: 0 }
+        Self {
+            line,
+            line_start,
+            trimmed: line.trim_end_matches([' ', '\t']).len(),
+            pos: 0,
+            col: 0,
+            partial: 0,
+        }
+    }
+
+    pub fn is_blank(&self) -> bool {
+        self.pos >= self.trimmed
     }
 
     pub fn tail(&self) -> &'s str {
@@ -38,7 +51,7 @@ impl<'s> Cursor<'s> {
     /// The span from here to the end of the line, trailing spaces/tabs excluded
     /// (the extent of a heading, thematic break or setext underline).
     pub fn trimmed_span(&self) -> Span {
-        Span::at(self.offset(), 0..self.tail().trim_end_matches([' ', '\t']).len())
+        Span::at(self.offset(), 0..self.trimmed.saturating_sub(self.pos))
     }
 
     pub fn segment(&self, line_content_end: u32) -> Segment {

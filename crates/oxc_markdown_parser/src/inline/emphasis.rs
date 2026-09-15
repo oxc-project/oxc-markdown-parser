@@ -11,18 +11,18 @@
 //!   within the new node's children;
 //!   the pair's own family between them is dead (the spec's rule).
 //!
-//! Exhausted delimiters stay in place with `remaining == 0`,
-//! so indices remain stable for openers_bottom.
+//! Resolution never moves a node: a pair only trims its two delimiter runs and is recorded as a [`Formed`],
+//! so every index stays valid; [`build`] makes the tree once at the end.
+//! Exhausted delimiters stay in place with `remaining == 0`.
 //! Node spans come straight from the delimiter runs' own ranges, never from arithmetic over child spans.
 
 use std::ops::Range;
 
 use crate::{
-    Constructs,
+    Constructs, syntax,
     syntax::unicode::{is_punctuation, is_whitespace},
 };
 
-use super::link::Bracket;
 use super::{PN, Tokenizer};
 
 #[derive(Clone, Copy)]
@@ -35,12 +35,20 @@ pub struct Delim {
     pub can_close: bool,
 }
 
+/// A pair the resolver formed:
+/// the node's extent (markers included), its marker and marker length.
+pub struct Formed {
+    pub r: Range<usize>,
+    pub marker: u8,
+    pub len: u8,
+}
+
 impl Tokenizer<'_, '_> {
     pub(crate) fn delimiter_run(&mut self) {
         let bytes = self.t.as_bytes();
         let marker = bytes[self.pos];
         let start = self.pos;
-        let len = bytes[start..].iter().take_while(|&&b| b == marker).count();
+        let len = syntax::run_len(&bytes[start..], marker);
         let prev = self.t[..start].chars().next_back();
         let next = self.t[start + len..].chars().next();
         let run = Run::new(marker, len, prev, next, self.constructs);
@@ -68,57 +76,48 @@ impl Tokenizer<'_, '_> {
     /// Resolution inside a bracket label:
     /// micromark's fixed `insideSpan` order (strikethrough, then attention).
     pub(crate) fn process_emphasis(&mut self, bottom: usize) {
-        resolve(&mut self.nodes, &mut self.delims, &mut self.brackets, bottom, true);
+        resolve(&mut self.nodes, &mut self.delims[bottom..], true, &mut self.formed);
     }
 
     /// End-of-run resolution: the first-used family resolves first.
     pub(crate) fn process_emphasis_final(&mut self) {
         let tilde_first = self.first_delim_tilde.unwrap_or(false);
-        resolve(&mut self.nodes, &mut self.delims, &mut self.brackets, 0, tilde_first);
+        resolve(&mut self.nodes, &mut self.delims, tilde_first, &mut self.formed);
     }
 }
 
-fn resolve(
-    nodes: &mut Vec<PN>,
-    delims: &mut [Delim],
-    brackets: &mut [Bracket],
-    bottom: usize,
-    tilde_first: bool,
-) {
+fn resolve(nodes: &mut [PN], delims: &mut [Delim], tilde_first: bool, formed: &mut Vec<Formed>) {
     let order = if tilde_first { [true, false] } else { [false, true] };
     for tilde_pass in order {
-        if delims[bottom..]
-            .iter()
-            .any(|d| d.remaining > 0 && d.can_close && (d.marker == b'~') == tilde_pass)
+        if delims.iter().any(|d| d.remaining > 0 && d.can_close && (d.marker == b'~') == tilde_pass)
         {
-            pass(nodes, delims, brackets, bottom, tilde_pass);
+            pass(nodes, delims, tilde_pass, formed);
         }
     }
 }
 
-/// One family pass of the spec's "process emphasis" over `delims[bottom..]`.
-fn pass(
-    nodes: &mut Vec<PN>,
-    delims: &mut [Delim],
-    brackets: &mut [Bracket],
-    bottom: usize,
-    tilde_pass: bool,
-) {
+/// One family pass of the spec's "process emphasis" over `delims`.
+#[expect(clippy::cast_possible_truncation)] // a pair uses one or two characters
+fn pass(nodes: &mut [PN], delims: &mut [Delim], tilde_pass: bool, formed: &mut Vec<Formed>) {
     // Lowest index worth scanning per closer class:
     // [marker is `_`][closer len % 3][closer can also open].
-    let mut openers_bottom = [[[bottom; 2]; 3]; 2];
-    let mut closer = bottom;
+    let mut openers_bottom = [[[0; 2]; 3]; 2];
+    // Strikethrough pairs equal-sized runs only:
+    // a failed scan rules out every opener of that size below.
+    let mut tilde_bottom = [0; 3];
+    let mut closer = 0;
     while closer < delims.len() {
         let c = &delims[closer];
         if (c.marker == b'~') != tilde_pass || !c.can_close || c.remaining == 0 {
             closer += 1;
             continue;
         }
-        // Strikethrough pairs whole equal-sized runs,
-        // with no rule of three and no openers_bottom participation.
         let class = (usize::from(c.marker == b'_'), c.remaining % 3, usize::from(c.can_open));
-        let scan_bottom =
-            if tilde_pass { bottom } else { openers_bottom[class.0][class.1][class.2] };
+        let scan_bottom = if tilde_pass {
+            tilde_bottom[c.remaining]
+        } else {
+            openers_bottom[class.0][class.1][class.2]
+        };
 
         let mut opener = None;
         let mut i = closer;
@@ -147,11 +146,13 @@ fn pass(
             }
         }
         let Some(opener) = opener else {
-            if !tilde_pass {
+            if tilde_pass {
+                tilde_bottom[c.remaining] = closer;
+            } else {
                 openers_bottom[class.0][class.1][class.2] = closer;
-                if !delims[closer].can_open {
-                    delims[closer].remaining = 0;
-                }
+            }
+            if !delims[closer].can_open {
+                delims[closer].remaining = 0;
             }
             closer += 1;
             continue;
@@ -167,52 +168,33 @@ fn pass(
         let opener_node = delims[opener].node;
         let closer_node = delims[closer].node;
 
-        let mut inner: Vec<PN> = nodes.drain(opener_node + 1..closer_node).collect();
-        // Same-marker runs never touch (they'd be one run),
-        // so at least one node sat between the pair.
-        let removed = closer_node - opener_node - 1;
-        debug_assert!(removed >= 1);
-        let shift = removed - 1;
-
         // Live delimiters of the other family between the pair resolve
         // within the new node's children (micromark's `insideSpan`);
         // the pair's own family between them is dead either way.
-        let mut inner_delims: Vec<Delim> = Vec::new();
-        for d in &mut delims[opener + 1..closer] {
-            if d.remaining > 0 && (d.marker == b'~') != tilde_pass {
-                inner_delims.push(Delim { node: d.node - (opener_node + 1), ..*d });
+        let between = &mut delims[opener + 1..closer];
+        if between.iter().any(|d| d.remaining > 0 && (d.marker == b'~') != tilde_pass) {
+            for d in between.iter_mut() {
+                if (d.marker == b'~') == tilde_pass {
+                    d.remaining = 0;
+                }
             }
+            resolve(nodes, between, true, formed);
+        }
+        for d in between.iter_mut() {
             d.remaining = 0;
         }
-        if !inner_delims.is_empty() {
-            resolve(&mut inner, &mut inner_delims, &mut [], 0, true);
-        }
 
-        // Trim the used characters off the opener's tail and (the now adjacent) closer's head;
+        // Trim the used characters off the opener's tail and the closer's head;
         // they become the new node's span.
         let o_end = text_range(nodes, opener_node).end;
         text_range(nodes, opener_node).end = o_end - use_n;
-        let c_start = text_range(nodes, opener_node + 1).start;
-        text_range(nodes, opener_node + 1).start = c_start + use_n;
-
-        let emph = PN::Emph {
-            marker: delims[opener].marker,
-            strong: !tilde_pass && use_n == 2,
-            children: inner,
+        let c_start = text_range(nodes, closer_node).start;
+        text_range(nodes, closer_node).start = c_start + use_n;
+        formed.push(Formed {
             r: o_end - use_n..c_start + use_n,
-        };
-        nodes.insert(opener_node + 1, emph);
-
-        for d in delims.iter_mut() {
-            if d.node >= closer_node {
-                d.node -= shift;
-            }
-        }
-        for b in brackets.iter_mut() {
-            if b.node >= closer_node {
-                b.node -= shift;
-            }
-        }
+            marker: delims[opener].marker,
+            len: use_n as u8,
+        });
 
         delims[opener].remaining -= use_n;
         delims[closer].remaining -= use_n;
@@ -239,6 +221,40 @@ fn text_range(nodes: &mut [PN], node: usize) -> &mut Range<usize> {
         PN::Text(r) => r,
         _ => unreachable!("delimiter nodes are text runs"),
     }
+}
+
+/// The tree of the flat `nodes` and the pairs `formed` over them (consumed; they nest properly).
+/// Emptied delimiter runs are dropped.
+pub fn build(nodes: impl IntoIterator<Item = PN>, formed: &mut Vec<Formed>) -> Vec<PN> {
+    // Pre-order
+    formed.sort_unstable_by(|a, b| a.r.start.cmp(&b.r.start).then(b.r.end.cmp(&a.r.end)));
+    let mut pending = formed.drain(..).peekable();
+    let mut out = Vec::new();
+    let mut stack: Vec<(Formed, Vec<PN>)> = Vec::new();
+    let close = |stack: &mut Vec<(Formed, Vec<PN>)>, out: &mut Vec<PN>| {
+        let (pair, children) = stack.pop().expect("a pair is open");
+        let node = PN::Emph { marker: pair.marker, len: pair.len, children, r: pair.r };
+        stack.last_mut().map_or(out, |(_, children)| children).push(node);
+    };
+    for node in nodes {
+        let at = node.start();
+        // A pair holds at least one node, so none both ends and starts before this one
+        while stack.last().is_some_and(|(pair, _)| pair.r.end <= at) {
+            close(&mut stack, &mut out);
+        }
+        while pending.peek().is_some_and(|pair| pair.r.start <= at) {
+            stack.push((pending.next().expect("peeked"), Vec::new()));
+        }
+        if matches!(&node, PN::Text(r) if r.is_empty()) {
+            continue;
+        }
+        stack.last_mut().map_or(&mut out, |(_, children)| children).push(node);
+    }
+    debug_assert_eq!(pending.len(), 0, "every pair starts before the last node");
+    while !stack.is_empty() {
+        close(&mut stack, &mut out);
+    }
+    out
 }
 
 /// A `*` / `_` / `~` run as the tokenizer sees it: its marker, length and flanking.
@@ -319,21 +335,19 @@ pub fn pairs(runs: &[Run], in_link: bool) -> Vec<Pair> {
         nodes.push(PN::Text(pos..pos + run.len));
         pos += run.len;
     }
-    resolve(&mut nodes, &mut delims, &mut [], 0, tilde_first);
-    let mut out = Vec::new();
-    collect_pairs(&nodes, &starts, &mut out);
+    let mut formed = Vec::new();
+    resolve(&mut nodes, &mut delims, tilde_first, &mut formed);
+    let run_at = |offset: usize| starts.partition_point(|&s| s <= offset) - 1;
+    let mut out: Vec<Pair> = formed
+        .iter()
+        .map(|pair| Pair {
+            opener: run_at(pair.r.start),
+            closer: run_at(pair.r.end - 1),
+            strong: pair.marker != b'~' && pair.len == 2,
+        })
+        .collect();
     out.sort_unstable();
     out
-}
-
-fn collect_pairs(nodes: &[PN], starts: &[usize], out: &mut Vec<Pair>) {
-    let run_at = |offset: usize| starts.partition_point(|&s| s <= offset) - 1;
-    for node in nodes {
-        if let PN::Emph { strong, children, r, .. } = node {
-            out.push(Pair { opener: run_at(r.start), closer: run_at(r.end - 1), strong: *strong });
-            collect_pairs(children, starts, out);
-        }
-    }
 }
 
 /// Flanking classification, micromark's `attention.js` version.

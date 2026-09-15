@@ -13,8 +13,8 @@
 //! - Formatter policy (sentence splitting, CJK classification, alignment judgment) stays out;
 //!   the AST records lexical facts only.
 //!
-//! Blank-line facts (loose lists, verbatim/markdown flips around HTML blocks) are not stored:
-//! sibling spans always allow counting the blank lines between them.
+//! Blank lines are not stored on nodes: `ParserReturn::blanks` lists them once,
+//! and sibling spans locate the ones between two blocks (`List::tight` is computed from it).
 
 use oxc_allocator::{ArenaBox, ArenaVec};
 
@@ -357,8 +357,6 @@ pub struct ContainerDirective<'a> {
 pub struct Text {
     pub span: Span,
     /// Every byte is ASCII.
-    /// Fast path for escape/wrap analysis.
-    pub ascii_only: bool,
     /// Contains CJK characters.
     /// Classification (CJ vs K vs punctuation) is formatter policy and happens downstream.
     pub contains_cjk: bool,
@@ -375,13 +373,17 @@ pub struct Emphasis<'a> {
 
 #[derive(Debug)]
 pub struct Strong<'a> {
+    /// `*` or `_`.
+    pub marker: u8,
     pub children: ArenaVec<'a, Inline<'a>>,
     pub span: Span,
 }
 
-/// GFM `~~x~~`.
+/// GFM `~~x~~` (`~x~` too with `gfm_strikethrough_single_tilde`).
 #[derive(Debug)]
 pub struct Strikethrough<'a> {
+    /// 1 or 2.
+    pub tildes: u8,
     pub children: ArenaVec<'a, Inline<'a>>,
     pub span: Span,
 }

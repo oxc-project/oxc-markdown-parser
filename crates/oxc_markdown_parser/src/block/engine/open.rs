@@ -20,7 +20,7 @@ use super::state::{Leaf, OpenContainer};
 impl<'s> Engine<'s> {
     pub(super) fn open_blocks(&mut self, mut cur: Cursor<'s>, content_end: u32) {
         loop {
-            if scan::is_blank(cur.tail()) {
+            if cur.is_blank() {
                 // Empty quote (`>`) or empty list item (`- `) opened this line
                 return;
             }
@@ -201,9 +201,8 @@ impl<'s> Engine<'s> {
         let label = Span::at(base, label);
         // Registered immediately, micromark-style;
         // the inline phase runs after the block phase either way.
-        self.refs.insert_footnote(
-            crate::syntax::label::normalize(label.slice(self.source)).into_owned(),
-        );
+        self.refs
+            .push_footnote(crate::syntax::label::normalize(label.slice(self.source)).into_owned());
         self.stack.push(OpenContainer::Footnote {
             children: Vec::new(),
             label,

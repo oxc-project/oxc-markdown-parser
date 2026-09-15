@@ -5,6 +5,6 @@ Root [0..22]
   Paragraph [0..21]
     Text [0..3] "abc"
     SoftBreak [4..4]
-    Text [4..7] "éa" non_ascii
+    Text [4..7] "éa"
     SoftBreak [8..8]
-    Text [8..21] "漢字とkana" non_ascii cjk
+    Text [8..21] "漢字とkana" cjk

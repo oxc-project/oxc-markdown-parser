@@ -9,9 +9,11 @@
 //! - (5) loop over new block starts (`open.rs`)
 //!
 //! Each step is one method of [`Engine`]; `line` only sequences them.
+//! Blocks close and attach to their container in `close.rs`.
 //! Extension constructs with their own continuation rules live beside it:
 //! `table.rs` (header stealing, row continuation) and `liquid.rs` (multi-line validation).
 
+mod close;
 mod liquid;
 mod open;
 mod state;
@@ -21,13 +23,13 @@ pub use state::BlankLines;
 
 use crate::inline::RefMap;
 use crate::options::Constructs;
-use crate::pos::{Segment, Span};
+use crate::pos::Span;
 use state::{Continuation, Leaf, OpenContainer, StackMatch};
 
 use super::cursor::Cursor;
-use super::ir::{Ir, IrItem, IrSeg};
+use super::ir::{Ir, IrSeg};
 use super::probe::{Start, probe};
-use super::{refdef, scan};
+use super::scan;
 
 pub struct Engine<'s> {
     source: &'s str,
@@ -80,8 +82,8 @@ impl<'s> Engine<'s> {
             }
         }
         self.mark_html_eof(self.source.ends_with(['\n', '\r']));
-        self.close_leaf();
         self.close_from(0);
+        self.refs.finish();
         (self.root, self.blanks, self.refs)
     }
 
@@ -108,7 +110,7 @@ impl<'s> Engine<'s> {
         }
 
         // 3. Blank lines.
-        if scan::is_blank(cur.tail()) {
+        if cur.is_blank() {
             return self.blank_line(cur, matched, all_matched, content_end);
         }
 
@@ -385,14 +387,14 @@ impl<'s> Engine<'s> {
                 // (micromark's list continuation: `factorySpace(…, size + 1)` on blank),
                 // so whitespace-only lines inside a fence or HTML block lose it.
                 // Footnote definitions do not (their continuation takes a blank line as-is).
-                OpenContainer::Item { content_indent, .. } if scan::is_blank(cur.tail()) => {
+                OpenContainer::Item { content_indent, .. } if cur.is_blank() => {
                     let avail = cur.indent_cols();
                     cur.advance_cols(avail.min(*content_indent));
                     true
                 }
                 OpenContainer::Item { content_indent, .. }
                 | OpenContainer::Footnote { content_indent, .. } => {
-                    if scan::is_blank(cur.tail()) {
+                    if cur.is_blank() {
                         true
                     } else if cur.indent_cols() >= *content_indent {
                         let indent = *content_indent;
@@ -427,143 +429,6 @@ impl<'s> Engine<'s> {
     fn probe(&self, tail: &str, para_open: bool) -> Option<Start> {
         probe(&self.constructs, tail, para_open)
     }
-
-    /// Closes the leaf into its container.
-    fn close_leaf(&mut self) {
-        let Some(leaf) = self.leaf.take() else { return };
-        let ir = match leaf {
-            Leaf::Paragraph { segments, .. } => {
-                let rest = self.finish_paragraph(segments);
-                let (Some(first), Some(last)) = (rest.first(), rest.last()) else { return };
-                Ir::Paragraph {
-                    span: Span::new(first.seg.span.start, last.seg.span.end),
-                    segments: rest,
-                }
-            }
-            Leaf::IndentedCode { lines, start, end, .. } => {
-                Ir::Code { fenced: None, lines, span: Span::new(start, end) }
-            }
-            Leaf::FencedCode { fence: b'$', info, lines, start, end, .. } => {
-                Ir::MathBlock { meta: info, lines, span: Span::new(start, end) }
-            }
-            Leaf::FencedCode { fence, info, lines, start, end, .. } => {
-                Ir::Code { fenced: Some((fence, info)), lines, span: Span::new(start, end) }
-            }
-            Leaf::Html { kind, lines, trailing_newline, start, end } => {
-                Ir::Html { kind, lines, trailing_newline, span: Span::new(start, end) }
-            }
-            Leaf::Table { align, rows, start, end } => {
-                Ir::Table { align, rows, span: Span::new(start, end) }
-            }
-        };
-        self.attach(ir);
-    }
-
-    /// Attaches stripped definitions and registers their labels,
-    /// the inline phase's reference map fills here, with no extra tree walk.
-    fn attach_definitions(&mut self, defs: Vec<Ir>) {
-        for def in defs {
-            if let Ir::Definition { label, .. } = &def {
-                let text = Segment::join(self.source, label);
-                self.refs.insert(crate::syntax::label::normalize(&text).into_owned());
-            }
-            self.attach(def);
-        }
-    }
-
-    /// The paragraph-close prologue shared by paragraphs and setext headings:
-    /// leading definitions are stripped and attached, and the last line loses its trailing whitespace.
-    /// Returns the remaining paragraph lines, possibly none.
-    fn finish_paragraph(&mut self, segments: Vec<IrSeg>) -> Vec<IrSeg> {
-        let (defs, mut rest) = refdef::strip(self.source, segments);
-        self.attach_definitions(defs);
-        trim_last(self.source, &mut rest);
-        rest
-    }
-
-    /// The prologue of every block start that is not a list item:
-    /// it ends the open leaf, and a list on top of the stack (only a compatible item continues one).
-    fn close_leaf_and_list(&mut self) {
-        self.close_leaf();
-        self.close_list_top();
-    }
-
-    /// Closes open containers so that `keep` remain.
-    fn close_from(&mut self, keep: usize) {
-        self.close_leaf();
-        while self.stack.len() > keep {
-            self.close_container();
-        }
-    }
-
-    /// Closes an open `List` sitting on top of the stack
-    /// (any new block other than a compatible item ends the list).
-    fn close_list_top(&mut self) {
-        debug_assert!(self.leaf.is_none());
-        if matches!(self.stack.last(), Some(OpenContainer::List { .. })) {
-            self.close_container();
-        }
-    }
-
-    fn close_container(&mut self) {
-        debug_assert!(self.leaf.is_none());
-        match self.stack.pop().expect("close_container on empty stack") {
-            OpenContainer::Quote { children, start, end } => {
-                self.attach(Ir::Quote { children, span: Span::new(start, end) });
-            }
-            OpenContainer::List { items, ordered, marker, start } => {
-                // Items arrive in source order; the last one ends the list
-                let end = items.last().map_or(start, |item| item.span.end);
-                self.attach(Ir::List { ordered, marker, items, span: Span::new(start, end) });
-            }
-            OpenContainer::Footnote { children, label, start, end, .. } => {
-                self.attach(Ir::FootnoteDefinition {
-                    label,
-                    children,
-                    span: Span::new(start, end),
-                });
-            }
-            OpenContainer::Directive { children, opening, closing, end, .. } => {
-                self.attach(Ir::ContainerDirective {
-                    opening,
-                    closing,
-                    children,
-                    span: Span::new(opening.start, end),
-                });
-            }
-            OpenContainer::Item { children, marker, padding, start, end, .. } => {
-                let Some(OpenContainer::List { items, .. }) = self.stack.last_mut() else {
-                    unreachable!("list items always sit in a list");
-                };
-                items.push(IrItem { marker, padding, children, span: Span::new(start, end) });
-            }
-        }
-    }
-
-    /// Attaches a finished block to the current innermost container.
-    fn attach(&mut self, ir: Ir) {
-        let end = ir.span().end;
-        let children = match self.stack.last_mut() {
-            Some(
-                OpenContainer::Quote { children, end: e, .. }
-                | OpenContainer::Item { children, end: e, .. }
-                | OpenContainer::Footnote { children, end: e, .. }
-                | OpenContainer::Directive { children, end: e, .. },
-            ) => {
-                *e = (*e).max(end);
-                children
-            }
-            Some(OpenContainer::List { .. }) => {
-                // Lists never receive non-item children directly
-                self.close_container();
-                return self.attach(ir);
-            }
-            None => &mut self.root,
-        };
-        // Siblings are attached in source order
-        debug_assert!(children.last().is_none_or(|prev| prev.span().end <= ir.span().start));
-        children.push(ir);
-    }
 }
 
 /// Content end (before the line terminator) of the line starting at `start`.
@@ -588,19 +453,4 @@ fn next_line_start(source: &str, content_end: u32) -> Option<u32> {
     }
     let next = i + if bytes[i] == b'\r' && bytes.get(i + 1) == Some(&b'\n') { 2 } else { 1 };
     (next < bytes.len()).then_some(next as u32)
-}
-
-/// Drops the trailing whitespace of a closed paragraph's last line from its segment:
-/// it is never content (a hard break needs a following line),
-/// so the paragraph or setext heading span ends before it, like an ATX heading's.
-fn trim_last(source: &str, segments: &mut [IrSeg]) {
-    if let Some(last) = segments.last_mut() {
-        last.seg.span.end = last.seg.span.start + trimmed_len(last.seg.span.slice(source));
-    }
-}
-
-/// Byte length of `tail` with trailing whitespace removed.
-#[expect(clippy::cast_possible_truncation)] // in-line lengths
-fn trimmed_len(tail: &str) -> u32 {
-    tail.trim_end_matches([' ', '\t']).len() as u32
 }

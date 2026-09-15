@@ -13,6 +13,7 @@
 //! never what a formatter should do about it.
 
 use crate::options::Constructs;
+use crate::syntax::run_len;
 
 use super::probe::{Start, probe};
 use super::scan;
@@ -58,7 +59,7 @@ pub fn ordered_number(marker: &str) -> Option<u32> {
 /// Leading indent is handled here: 4+ columns of indent is indented code (never a block start),
 /// per the default `code_indented` construct.
 pub fn line_start(constructs: &Constructs, line: &str, in_paragraph: bool) -> Option<LineStart> {
-    let indent = line.bytes().take_while(|&b| b == b' ').count();
+    let indent = run_len(line.as_bytes(), b' ');
     // 4+ spaces, or a tab anywhere in the first ≤3 columns
     // (a tab there always advances past column 4): indented code, not a block start.
     if indent >= 4 || line.as_bytes().get(indent) == Some(&b'\t') {
