@@ -211,11 +211,8 @@ fn link_facts<'a>(kind: &'a LinkKind<'a>) -> Vec<Fact<'a>> {
 
 fn walk_inline(inline: &Inline<'_>, v: &mut impl Visitor) {
     match inline {
-        Inline::Text(Text { span, ascii_only, contains_cjk }) => {
+        Inline::Text(Text { span, contains_cjk }) => {
             let mut facts = vec![];
-            if !ascii_only {
-                facts.push(Fact::Str("non_ascii", String::new()));
-            }
             if *contains_cjk {
                 facts.push(Fact::Str("cjk", String::new()));
             }
@@ -235,13 +232,13 @@ fn walk_inline(inline: &Inline<'_>, v: &mut impl Visitor) {
             walk_inlines(children, v);
         }
         Inline::Strong(n) => {
-            let Strong { children, span } = &**n;
-            v.enter("Strong", *span, vec![]);
+            let Strong { marker, children, span } = &**n;
+            v.enter("Strong", *span, vec![Fact::Str("marker", (*marker as char).to_string())]);
             walk_inlines(children, v);
         }
         Inline::Strikethrough(n) => {
-            let Strikethrough { children, span } = &**n;
-            v.enter("Strikethrough", *span, vec![]);
+            let Strikethrough { tildes, children, span } = &**n;
+            v.enter("Strikethrough", *span, vec![Fact::Str("tildes", tildes.to_string())]);
             walk_inlines(children, v);
         }
         Inline::CodeSpan(n) => {

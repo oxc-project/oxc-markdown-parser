@@ -2,7 +2,7 @@
 
 use std::ops::Range;
 
-use crate::syntax::skip_ws;
+use crate::syntax::{run_len, skip_ws};
 
 use super::{is_blank, trim_range};
 
@@ -33,7 +33,7 @@ pub fn thematic_break(tail: &str) -> bool {
 #[expect(clippy::cast_possible_truncation)] // level is 1..=6
 pub fn atx_heading(tail: &str) -> Option<(u8, Range<usize>)> {
     let bytes = tail.as_bytes();
-    let level = bytes.iter().take_while(|&&b| b == b'#').count();
+    let level = run_len(bytes, b'#');
     if level == 0 || level > 6 {
         return None;
     }
@@ -72,7 +72,7 @@ pub fn setext_underline(tail: &str) -> Option<u8> {
     if marker != b'=' && marker != b'-' {
         return None;
     }
-    let run = bytes.iter().take_while(|&&b| b == marker).count();
+    let run = run_len(bytes, marker);
     if !is_blank(&tail[run..]) {
         return None;
     }
@@ -89,7 +89,7 @@ pub fn fence_open(tail: &str) -> Option<(u8, u32, Range<usize>)> {
     if marker != b'`' && marker != b'~' {
         return None;
     }
-    let run = bytes.iter().take_while(|&&b| b == marker).count();
+    let run = run_len(bytes, marker);
     if run < 3 {
         return None;
     }
@@ -103,7 +103,7 @@ pub fn fence_open(tail: &str) -> Option<(u8, u32, Range<usize>)> {
 /// Closing code fence: a run of `marker` at least `min_len` long, then only whitespace.
 pub fn fence_close(tail: &str, marker: u8, min_len: u32) -> bool {
     let bytes = tail.as_bytes();
-    let run = bytes.iter().take_while(|&&b| b == marker).count();
+    let run = run_len(bytes, marker);
     run >= min_len as usize && is_blank(&tail[run..])
 }
 

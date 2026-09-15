@@ -5,19 +5,19 @@ Root [0..79]
   Paragraph [0..30]
     Link [0..4] kind=shortcut
       label[0] [1..3] "σ"
-      Text [1..3] "σ" non_ascii
+      Text [1..3] "σ"
     Text [4..5] " "
     Link [5..10] kind=shortcut
       label[0] [6..9] "ﬀ"
-      Text [6..9] "ﬀ" non_ascii
+      Text [6..9] "ﬀ"
     Text [10..11] " "
     Link [11..17] kind=shortcut
       label[0] [12..16] "A  B"
       Text [12..16] "A  B"
-    Text [17..26] " [a\u{3000}b] " non_ascii cjk
+    Text [17..26] " [a\u{3000}b] " cjk
     Link [26..30] kind=shortcut
       label[0] [27..29] "\u{a0}"
-      Text [27..29] "\u{a0}" non_ascii
+      Text [27..29] "\u{a0}"
   Definition [32..40] dest=[38..40] "/1" angle=false
     label[0] [33..35] "ς"
   Definition [41..49] dest=[47..49] "/2" angle=false

@@ -57,25 +57,19 @@ so the opener accepts any name-like start instead of one grammar (`DIVERGENCES.m
 
 Two phases, three steps:
 
-1. Block phase (`src/block/engine/`, `Engine`).
-   cmark-style container-stack line loop; `engine/mod.rs` sequences the five per-line steps as one method each,
-   `engine/open.rs` holds the block openers, `engine/state.rs` the open-container / leaf enums.
-   `src/block/probe.rs` is the single table of block starts (priority-ordered, construct-gated);
-   the open loop, the lazy-continuation test, the liquid interrupt check and the HTML quirk all consume it.
-   `src/block/scan/` has one file per construct family (`commonmark`, `html`, `table`, `footnote`, `math`, `directive`) with the pure line scanners.
-   A new block construct is one `Start` variant, one probe row, one opener in `open.rs`, one scanner.
-   Extension constructs with their own continuation rules sit beside the loop: `engine/table.rs`, `engine/liquid.rs`.
-   `src/block/lexical.rs` is the public line-start classification for formatters, a facade over `probe`.
-   Output is an IR tree (`block/ir.rs`) whose leaves hold logical-line `Segment`s:
-   container prefixes stripped, leading whitespace of continuation lines kept raw (code spans need it).
-   Definitions are stripped at paragraph close (`block/refdef.rs`) and their normalized labels collected on the engine.
-2. Build (`src/block/build.rs`).
-   IR to arena AST; computes span-derived facts (list tightness, task checkboxes) and runs the inline phase per leaf.
-3. Inline phase (`src/inline/`).
-   micromark-shaped tokenizer over the joined logical text;
-   `inline/input.rs` keeps an exact per-byte map back to source offsets.
-   Code spans, autolinks and raw HTML resolve immediately;
-   `*_~` runs and brackets are recorded, then `emphasis.rs` (delimiter stack) and `link.rs` (bracket stack) restructure the flat node list.
+1. Block phase (`src/block/engine/`): cmark-style container-stack line loop.
+   `mod.rs` sequences the per-line steps, `open.rs` / `close.rs` open and close blocks, `state.rs` holds the enums;
+   `table.rs` and `liquid.rs` are the extension constructs with their own continuation rules.
+   `src/block/probe.rs` is the single table of block starts (priority-ordered, construct-gated); every "what does this line open" question goes through it,
+   `src/block/lexical.rs` included (the public facade for formatters).
+   A new block construct is one `Start` variant, one probe row, one opener, one scanner in `src/block/scan/`.
+   Output is an IR tree (`block/ir.rs`) of logical-line `Segment`s: container prefixes stripped, leading whitespace of continuation lines kept (code spans need it).
+   Definitions are stripped at paragraph close (`block/refdef.rs`); their labels go to the `RefMap`.
+2. Build (`src/block/build.rs`): IR to arena AST, span-derived facts (list tightness, task checkboxes), the inline phase per leaf.
+3. Inline phase (`src/inline/`): micromark-shaped tokenizer over the joined logical text (`input.rs` maps offsets back to the source).
+   Code spans, autolinks, raw HTML and the extensions (`extension.rs`) resolve immediately;
+   `*_~` runs and brackets are recorded and resolved by `emphasis.rs` / `link.rs`, the tree is built once at the end (`lower.rs`).
+   A scan that can fail far from where it started caches the dead end (`liquid_exhausted`, `wiki_dead`, `not_trail_until`).
 
 Shared grammar lives once, in `src/syntax/`:
 - `link_target.rs`: destination / title / label scanning for refdefs and inline links
@@ -87,7 +81,7 @@ Shared grammar lives once, in `src/syntax/`:
 
 ## Invariants
 
-- Spans are original-source offsets, via exact per-byte maps, never arithmetic over rebuilt buffers.
+- Spans are original-source offsets, via exact per-line maps, never arithmetic across lines of a rebuilt buffer.
 - No cooked values in the AST.
   Consumers slice raw source through spans; `decode` / `label` are the shared cookers.
   Style facts (markers, fence chars, break kinds, reference kinds, lazy lines) are first-class fields.

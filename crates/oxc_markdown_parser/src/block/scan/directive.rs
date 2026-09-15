@@ -8,6 +8,8 @@
 //!
 //! See AGENTS.md "Dialects".
 
+use crate::syntax::run_len;
+
 /// Opening container-directive fence:
 /// 3+ `:`s, optional spaces / tabs, then a name-like start (alphanumeric, `_`, `{` or `[`)
 /// and anything to the end of the line.
@@ -15,7 +17,7 @@
 /// Returns the fence length.
 #[expect(clippy::cast_possible_truncation)] // fence runs fit in-line lengths
 pub fn directive_fence_open(tail: &str) -> Option<u32> {
-    let run = tail.bytes().take_while(|&b| b == b':').count();
+    let run = run_len(tail.as_bytes(), b':');
     if run < 3 {
         return None;
     }

@@ -20,6 +20,11 @@ pub fn escapes_next(bytes: &[u8], p: usize) -> bool {
     bytes.get(p + 1).is_some_and(u8::is_ascii_punctuation)
 }
 
+/// Length of the run of `marker` bytes at the start of `bytes`.
+pub fn run_len(bytes: &[u8], marker: u8) -> usize {
+    bytes.iter().take_while(|&&b| b == marker).count()
+}
+
 /// Skips spaces/tabs and up to `max_newlines` line endings.
 pub fn skip_ws(bytes: &[u8], mut p: usize, max_newlines: usize) -> usize {
     let mut newlines = 0;

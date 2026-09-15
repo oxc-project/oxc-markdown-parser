@@ -1,8 +1,9 @@
 //! The inline phase's view of a leaf's content:
-//! the logical lines joined with `\n`, plus an exact per-byte map back to source offsets.
+//! the logical lines joined with `\n`, plus a per-line map back to source offsets.
 //!
-//! Node spans always come from this map (never from arithmetic over the joined buffer),
-//! so container prefixes between lines can't skew them.
+//! Within a line the joined bytes are the source bytes;
+//! across lines (container prefixes, padding) only the map is exact,
+//! so node spans always go through it.
 
 use std::ops::Range;
 
@@ -13,37 +14,66 @@ use crate::pos::{Segment, Span};
 
 pub struct Input {
     pub text: String,
-    /// Source offset of each joined byte; separator `\n`s map to the next line's start.
-    /// One trailing sentinel (end of the last line).
-    offsets: Vec<u32>,
-    /// Per joined line: (joined start, virtual padding bytes at its head).
-    lines: Vec<(usize, u8)>,
+    lines: Vec<Line>,
+}
+
+#[derive(Clone, Copy)]
+struct Line {
+    /// Joined offset of its first byte (padding first, then the content).
+    joined: usize,
+    /// Virtual padding bytes at its head (a partially consumed tab).
+    padding: u8,
+    /// Source offset of its content.
+    source: u32,
 }
 
 impl Input {
     pub fn new(source: &str, segments: &[IrSeg]) -> Self {
-        let mut text = String::new();
-        let mut offsets = Vec::new();
+        let len = segments
+            .iter()
+            .map(|s| (s.seg.span.end - s.seg.span.start) as usize + usize::from(s.seg.padding) + 1)
+            .sum();
+        let mut text = String::with_capacity(len);
         let mut lines = Vec::with_capacity(segments.len());
         for (i, s) in segments.iter().enumerate() {
             if i > 0 {
                 text.push('\n');
-                offsets.push(s.seg.span.start);
             }
-            lines.push((text.len(), s.seg.padding));
+            lines.push(Line {
+                joined: text.len(),
+                padding: s.seg.padding,
+                source: s.seg.span.start,
+            });
             for _ in 0..s.seg.padding {
                 text.push(' ');
-                offsets.push(s.seg.span.start);
             }
             text.push_str(s.seg.span.slice(source));
-            offsets.extend(s.seg.span.start..s.seg.span.end);
         }
-        offsets.push(segments.last().map_or(0, |s| s.seg.span.end));
-        Self { text, offsets, lines }
+        Self { text, lines }
     }
 
+    fn line_of(&self, joined: usize) -> usize {
+        self.lines.partition_point(|line| line.joined <= joined).saturating_sub(1)
+    }
+
+    /// Joined offset of line `i`'s separator (or the text's end).
+    fn line_end(&self, i: usize) -> usize {
+        self.lines.get(i + 1).map_or(self.text.len(), |next| next.joined - 1)
+    }
+
+    /// Source offset of a joined byte; a separator `\n` maps to the next line's start,
+    /// the end of the text to the end of the last line.
+    #[expect(clippy::cast_possible_truncation)] // in-line lengths
     pub fn offset(&self, joined: usize) -> u32 {
-        self.offsets[joined.min(self.offsets.len() - 1)]
+        let i = self.line_of(joined);
+        if let Some(next) = self.lines.get(i + 1)
+            && joined + 1 >= next.joined
+        {
+            return next.source;
+        }
+        let line = self.lines[i];
+        let content = line.joined + usize::from(line.padding);
+        line.source + joined.saturating_sub(content) as u32
     }
 
     /// Source span of a joined range.
@@ -58,56 +88,41 @@ impl Input {
     /// Content segments of a joined range, one per line piece, straight into the arena
     /// (multi-line constructs cross container prefixes, so a single span can't cover them faithfully;
     /// virtual padding from partially consumed tabs is preserved as [`Segment::padding`]).
-    /// Single-line ranges (the common case) take no scan.
     pub fn pieces_in<'a>(
         &self,
         r: Range<usize>,
         allocator: &'a Allocator,
     ) -> ArenaVec<'a, Segment> {
-        let text = &self.text[r.clone()];
-        if !text.contains('\n') {
-            return ArenaVec::from_array_in([self.piece(r)], &allocator);
-        }
-        let mut out = ArenaVec::with_capacity_in(text.matches('\n').count() + 1, &allocator);
-        let mut start = r.start;
-        for (i, b) in text.bytes().enumerate() {
-            if b == b'\n' {
-                out.push(self.piece(start..r.start + i));
-                start = r.start + i + 1;
-            }
-        }
-        out.push(self.piece(start..r.end));
-        out
+        ArenaVec::from_iter_in(self.pieces_iter(r), &allocator)
     }
 
-    /// Std-vector form of [`pieces_in`](Self::pieces_in), for the block-phase IR.
+    /// Std-vector form of [`pieces_in`](Self::pieces_in), for the block-phase IR (definitions).
     pub fn pieces(&self, r: Range<usize>) -> Vec<Segment> {
-        let mut out = Vec::new();
-        let mut start = r.start;
-        for (i, b) in self.text[r.clone()].bytes().enumerate() {
-            if b == b'\n' {
-                out.push(self.piece(start..r.start + i));
-                start = r.start + i + 1;
-            }
-        }
-        out.push(self.piece(start..r.end));
-        out
+        self.pieces_iter(r).collect()
+    }
+
+    /// One piece per line the range touches
+    /// (a range ending right after a separator has an empty piece on the next line).
+    fn pieces_iter(&self, r: Range<usize>) -> impl Iterator<Item = Segment> {
+        (self.line_of(r.start)..=self.line_of(r.end)).map(move |i| self.piece(i, r.clone()))
     }
 
     /// How many joined lines start before `joined`.
     pub fn lines_before(&self, joined: usize) -> usize {
-        self.lines.partition_point(|&(start, _)| start < joined)
+        self.lines.partition_point(|line| line.joined < joined)
     }
 
-    /// One single-line piece:
+    /// The part of `r` on line `i`:
     /// joined padding bytes inside it become [`Segment::padding`] instead of span content.
-    #[expect(clippy::cast_possible_truncation)] // clamped to a u8 padding
-    fn piece(&self, r: Range<usize>) -> Segment {
-        let line = self.lines.partition_point(|&(start, _)| start <= r.start).saturating_sub(1);
-        let padding_end =
-            self.lines.get(line).map_or(0, |&(start, padding)| start + usize::from(padding));
-        let padding = padding_end.saturating_sub(r.start).min(r.len());
-        Segment::new(self.span(r.start + padding..r.end), padding as u8)
+    #[expect(clippy::cast_possible_truncation)] // in-line lengths, padding clamped to a u8
+    fn piece(&self, i: usize, r: Range<usize>) -> Segment {
+        let line = self.lines[i];
+        let start = r.start.max(line.joined);
+        let end = r.end.min(self.line_end(i)).max(start);
+        let content = line.joined + usize::from(line.padding);
+        let padding = content.saturating_sub(start).min(end - start);
+        let source = self.offset(start + padding);
+        Segment::new(Span::new(source, source + (end - start - padding) as u32), padding as u8)
     }
 }
 
@@ -151,5 +166,15 @@ mod tests {
         // A range starting inside the padding keeps only the remaining padding
         assert_eq!(input.pieces(4..7), vec![Segment::new(Span::new(7, 9), 1)]);
         assert_eq!(input.pieces(1..2), vec![Segment::new(Span::new(3, 4), 0)]);
+        // A range ending right after the separator has an empty piece on the next line;
+        // one starting at the separator, an empty piece before it (`[\nfoo\n]` labels)
+        assert_eq!(
+            input.pieces(0..3),
+            vec![Segment::new(Span::new(2, 4), 0), Segment::new(Span::empty(7), 0)]
+        );
+        assert_eq!(
+            input.pieces(2..7),
+            vec![Segment::new(Span::empty(7), 0), Segment::new(Span::new(7, 9), 2)]
+        );
     }
 }
