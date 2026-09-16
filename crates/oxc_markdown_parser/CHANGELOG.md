@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - *(parser)* export more parser contract ([#11](https://github.com/oxc-project/oxc-markdown-parser/pull/11))
-- *(parser)* export inline::attension ([#10](https://github.com/oxc-project/oxc-markdown-parser/pull/10))
+- *(parser)* export inline::attention ([#10](https://github.com/oxc-project/oxc-markdown-parser/pull/10))
 - *(parser)* support container directive on any name-like fence ([#9](https://github.com/oxc-project/oxc-markdown-parser/pull/9))
 - *(parser)* expose `unicode`, add `decode::destination` ([#7](https://github.com/oxc-project/oxc-markdown-parser/pull/7))
 
