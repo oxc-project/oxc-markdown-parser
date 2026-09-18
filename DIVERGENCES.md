@@ -212,7 +212,7 @@ Our opener is 3+ colons, optional spaces / tabs, then an alphanumeric, `_`, `{` 
 that covers the VitePress / markdown-it-container form (`::: tip Custom Title`) and Pandoc's fenced div (`::: {.class}`),
 which micromark reads as paragraphs.
 The fence line is verbatim in the AST, so no dialect grammar is parsed; a bare `:::` or `:::)` is still not an opener.
-Prettier has no directive construct (#19662 would add micromark's).
+Prettier has no directive construct (prettier/prettier#19662 would add micromark's).
 `decided by: AGENTS.md "Dialects" (the one construct whose fence line is kept verbatim)`
 `runner: loose directive opener`
 
@@ -339,8 +339,8 @@ Spec deviations we reproduce on purpose. Each was put through the same questions
   Intent: `html-flow.js` lifts the restriction when `parser.lazy[line]`, and micromark's tests pin it.
 - **A type 7 tag line outranks a table** (`a\n<a>\n:-:`: an HTML block, not a table with header `<a>`).
   Neither spec covers a delimiter row stealing the paragraph's last line; no evidence either way, so kept.
-- **A `{%` / `{{` line closes the paragraph even when the tag never closes** (`a\n{% x\nb`: two paragraphs).
-  Intent: the extension returns `ok` on the opener alone in interrupt mode (`isFlow && interrupt ? ok`).
+- **A `{%` / `{{` line interrupts a paragraph only as a complete flow tag** (`a\n{% x\nb`: one paragraph;
+  `a\n{% x %}\nb`: paragraph, liquid, paragraph). Intent: prettier/prettier#20087 runs the whole construct in interrupt mode.
 - **During table continuation a liquid opener is only a candidate** (`{% x` stays a row unless the tag completes).
   Intent: `_gfmTableDynamicInterruptHack` exists for exactly this.
 - **Whitespace-only text after a task-list checkbox** (`- [x]   \n  :-:` is a table, not a task item).

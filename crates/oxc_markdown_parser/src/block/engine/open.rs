@@ -90,14 +90,21 @@ impl<'s> Engine<'s> {
                     self.open_directive(cur, indent, content_end, len);
                 }
                 Some(Start::Liquid) => {
-                    // micromark's interrupt check passes on the two-byte opener alone,
-                    // so an open paragraph closes even when the full construct fails
-                    // and this line restarts as a new paragraph
-                    // (whose inline phase may still find a liquid text tag).
-                    self.close_leaf();
+                    // The whole construct must succeed to interrupt a paragraph;
+                    // a failed attempt leaves the line as paragraph text,
+                    // whose inline phase may still find a liquid text tag.
                     match self.liquid_scan(cur, content_end) {
-                        Some(liquid) => self.open_liquid(liquid),
-                        None => self.paragraph_text(cur, content_end, false),
+                        Some(liquid) => {
+                            self.close_leaf();
+                            self.open_liquid(liquid);
+                        }
+                        None => {
+                            self.paragraph_text(
+                                if para_open { save } else { cur },
+                                content_end,
+                                false,
+                            );
+                        }
                     }
                 }
                 Some(Start::Html { kind }) => self.open_html(save, content_end, kind),

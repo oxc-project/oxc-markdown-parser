@@ -13,7 +13,7 @@
 //! never what a formatter should do about it.
 
 use crate::options::Constructs;
-use crate::syntax::run_len;
+use crate::syntax::{self, run_len};
 
 use super::probe::{Start, probe};
 use super::scan;
@@ -75,7 +75,17 @@ pub fn line_start(constructs: &Constructs, line: &str, in_paragraph: bool) -> Op
             Start::Fence { .. } => LineStart::CodeFence,
             Start::Html { .. } => LineStart::HtmlBlock,
             Start::MathFence { .. } => LineStart::MathFence,
-            Start::Liquid => LineStart::Liquid,
+            Start::Liquid => {
+                // A tag closed on this line interrupts only when nothing follows its closer;
+                // an unclosed one may still close on a later line.
+                let closer = syntax::liquid::open(tail)?;
+                if let Some(after) = syntax::liquid::close(&tail[2..], closer)
+                    && !scan::is_blank(&tail[2 + after..])
+                {
+                    return None;
+                }
+                LineStart::Liquid
+            }
             Start::Directive { .. } => LineStart::DirectiveOpener,
             Start::FootnoteDef { .. } => LineStart::FootnoteDefinition,
             Start::ListItem { .. } => LineStart::ListItem,
@@ -112,6 +122,8 @@ mod tests {
         assert_eq!(md("<div>", false), Some(LineStart::HtmlBlock));
         assert_eq!(md("$$", false), Some(LineStart::MathFence));
         assert_eq!(md("{% t %}", false), Some(LineStart::Liquid));
+        assert_eq!(md("{% t", false), Some(LineStart::Liquid));
+        assert_eq!(md("{{ t }} text", false), None);
         assert_eq!(md("[^1]: n", false), Some(LineStart::FootnoteDefinition));
         assert_eq!(md("- item", false), Some(LineStart::ListItem));
         assert_eq!(md("plain text", true), None);

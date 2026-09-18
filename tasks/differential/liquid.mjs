@@ -1,4 +1,4 @@
-// Vendored verbatim from prettier/prettier@d4126e8c9
+// Vendored verbatim from prettier/prettier@811d26813
 // src/language-markdown/parse/micromark/micromark-extension-liquid.js
 // Copyright © James Long and contributors, MIT License.
 // `just vendor-check` diffs this file against that commit; everything below this line is theirs.
@@ -82,7 +82,7 @@ function liquidSyntax() {
    */
   function tokenize(effects, ok, nok, mode) {
     const isFlow = mode === "flow";
-    const { interrupt, now, parser } = this;
+    const { now, parser } = this;
     /** @type {typeof codes.rightCurlyBrace | typeof codes.percentSign} */
     let closingCode;
 
@@ -102,7 +102,7 @@ function liquidSyntax() {
                 ? codes.percentSign
                 : codes.rightCurlyBrace;
             effects.consume(code);
-            return isFlow && interrupt ? ok : inside;
+            return inside;
           default:
             return nok(code);
         }
