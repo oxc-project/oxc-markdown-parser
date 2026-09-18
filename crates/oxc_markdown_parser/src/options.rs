@@ -104,6 +104,23 @@ impl Constructs {
     /// TODO: Not usable yet: the `mdx_*` constructs are unimplemented,
     /// and disabling `code_indented` must also lift micromark's 4-space/3-column indent limits engine-wide (currently hardcoded),
     /// so this preset misparses e.g. `    # hi`.
+    ///
+    /// NOTE: Design:
+    /// - Expression boundaries need JavaScript lexing (`{"}"}`, `{/* } */}`, template literals),
+    ///   so this preset lives behind an `mdx` cargo feature that adds `oxc_parser` as an optional dependency.
+    ///   No injection point: the scanner is this crate's own module, tested here.
+    ///   The oxc workspace patches `oxc_parser` to its path crate, as it does `oxc_allocator`.
+    /// - Semantics follow Prettier's MDX v3 parser (prettier/prettier#18533, micromark-extension-mdx-*):
+    ///   - `{expr}` (flow, text, JSX attribute values): at each candidate `}`,
+    ///     the text so far must be a complete expression (`Parser::parse_expression`, which rejects trailing content);
+    ///     otherwise continue to the next `}`, and fail at EOF.
+    ///   - `import` / `export`: ends at a blank line unless the parse error is at the end of input
+    ///     (label start == length, or an `Unterminated ...` lexer error), then continue past it.
+    ///     Prettier's `dummyAcorn` does not validate the body, so neither do we.
+    ///   - JSX tags are lexed here; only their `{...}` attribute values consult the scanner.
+    ///   - A hand-written brace scanner would agree on every input Prettier can format
+    ///     (they differ only inside invalid JS, where Prettier throws),
+    ///     which is why `oxc_lexer`, once published, can replace the probing without changing fixtures.
     pub fn mdx() -> Self {
         Self {
             autolink: false,
