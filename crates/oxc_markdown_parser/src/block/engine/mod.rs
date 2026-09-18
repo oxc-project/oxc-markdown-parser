@@ -239,7 +239,14 @@ impl<'s> Engine<'s> {
     /// so a new block would attach beside it, not interrupt it.
     /// Setext underlines are deliberately absent, a lazy line is never an underline.
     fn lazy_continuation(&mut self, cur: Cursor<'s>, matched: usize, content_end: u32) -> bool {
-        let start = cur.flow_start().and_then(|c| self.probe(c.tail(), false));
+        let mut start = cur.flow_start().and_then(|c| self.probe(c.tail(), false));
+        // A liquid opener interrupts only as a complete construct
+        if matches!(start, Some(Start::Liquid))
+            && let Some(c) = cur.flow_start()
+            && self.liquid_scan(c, content_end).is_none()
+        {
+            start = None;
+        }
         let directive_between =
             self.stack[matched..].iter().any(|c| matches!(c, OpenContainer::Directive { .. }));
         if !directive_between && let Some(Leaf::Paragraph { segments, .. }) = &mut self.leaf {
