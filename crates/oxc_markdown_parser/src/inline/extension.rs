@@ -15,7 +15,8 @@ impl Tokenizer<'_, '_> {
         let start = self.pos;
         let n = syntax::run_len(&self.t.as_bytes()[start..], b'$');
         let min = if self.constructs.math_text_single_dollar { 1 } else { 2 };
-        let close = if n < min { None } else { matching_run(self.t.as_bytes(), start + n, b'$', n) };
+        let close =
+            if n < min { None } else { matching_run(self.t.as_bytes(), start + n, b'$', n) };
         let Some(close) = close else {
             self.pos = start + n;
             return;
