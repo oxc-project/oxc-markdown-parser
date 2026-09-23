@@ -1,15 +1,28 @@
 ---
 source: crates/oxc_markdown_parser/tests/ast.rs
 ---
-Root [0..20]
+Root [0..84]
   Paragraph [0..19]
-    MathSpan [0..3]
-      pieces[0] [0..3] "$a$"
-    Text [3..4] " "
+    Text [0..4] "$a$ "
     MathSpan [4..9]
       pieces[0] [4..9] "$$b$$"
-    Text [9..10] " "
-    MathSpan [10..15]
-      pieces[0] [10..12] "$c"
-      pieces[1] [13..15] "d$"
-    Text [15..19] " $ e"
+    Text [9..12] " $c"
+    SoftBreak [13..13]
+    Text [13..19] "d$ $ e"
+  Paragraph [21..83]
+    Strong [21..34] marker=*
+      Text [23..32] "Uses $FOO"
+    Text [34..40] " from "
+    CodeSpan [40..46]
+      pieces[0] [41..45] "a.sh"
+    Text [46..51] " and "
+    CodeSpan [51..57]
+      pieces[0] [52..56] "b.sh"
+    Text [57..64] ", plus "
+    CodeSpan [64..70]
+      pieces[0] [65..69] "$BAR"
+    Text [70..76] " from "
+    CodeSpan [76..82]
+      pieces[0] [77..81] "c.sh"
+    Text [82..83] "."
+blanks: [20..20]

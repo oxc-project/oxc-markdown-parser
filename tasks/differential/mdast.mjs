@@ -1,8 +1,12 @@
-// The mdast oracle: `mdast-util-from-markdown` over micromark in the full
-// Prettier composition (GFM with `singleTilde: false`, math, wiki-link with
-// the alias hack, liquid, the html-text override) plus container
-// directives, reduced to the structural signature `tasks/render/src/sig.rs`
-// prints for our AST. Values are cooked the way mdast cooks them.
+// The mdast oracle: `mdast-util-from-markdown` over micromark in the full Prettier composition;
+// - GFM with `singleTilde: false`
+// - math with `singleDollarTextMath: false`
+// - wiki-link with the alias hack
+// - liquid
+// - the html-text override
+// plus container directives,
+// reduced to the structural signature `tasks/render/src/sig.rs` prints for our AST.
+// Values are cooked the way mdast cooks them.
 import { fromMarkdown as wikiLinkFromMarkdown } from "@braindb/mdast-util-wiki-link";
 import { syntax as wikiLinkSyntax } from "@braindb/micromark-extension-wiki-link";
 import { directiveFromMarkdown } from "mdast-util-directive";
@@ -29,7 +33,7 @@ gfmMdast.find((e) => e.enter?.literalAutolink).transforms = [];
 const OPTIONS = {
   extensions: [
     gfm({ singleTilde: false }),
-    math(),
+    math({ singleDollarTextMath: false }),
     // Prettier disables the alias divider with a NaN charCodeAt hack.
     wikiLinkSyntax({ aliasDivider: { charCodeAt: () => Number.NaN } }),
     liquidSyntax(),

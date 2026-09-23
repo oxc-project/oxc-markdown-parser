@@ -46,8 +46,12 @@ pub struct Constructs {
 
     /// `$$ … $$` display math.
     pub math_flow: bool,
-    /// `$ … $` inline math, printed verbatim.
+    /// `$$ … $$` inline math, printed verbatim.
     pub math_text: bool,
+    /// Whether a single `$` also opens inline math.
+    /// Prettier (`singleDollarTextMath: false`) requires `$$`;
+    /// keep this off to leave prose like `$FOO` and `$10` alone.
+    pub math_text_single_dollar: bool,
     /// `{% … %}` / `{{ … }}` template tags, multi-line capable.
     /// Never interpreted, kept lossless.
     pub liquid: bool,
@@ -87,6 +91,7 @@ impl Constructs {
             gfm_task_list_item: true,
             math_flow: true,
             math_text: true,
+            math_text_single_dollar: false,
             liquid: true,
             wiki_link: true,
             container_directive: true,
