@@ -6,7 +6,7 @@ use crate::syntax;
 use super::{PN, Tokenizer, matching_run};
 
 impl Tokenizer<'_, '_> {
-    /// `$ … $` / `$$ … $$` math (micromark-extension-math, single dollars allowed):
+    /// `$$ … $$` math (micromark-extension-math; `$ … $` too with `math_text_single_dollar`):
     /// the opening run is maximal, the closing run must match it exactly,
     /// content may span line endings but not the end of input.
     /// Resolves immediately, like code spans, failed attempt consumes the whole run
@@ -14,7 +14,10 @@ impl Tokenizer<'_, '_> {
     pub(super) fn math_span(&mut self) {
         let start = self.pos;
         let n = syntax::run_len(&self.t.as_bytes()[start..], b'$');
-        let Some(close) = matching_run(self.t.as_bytes(), start + n, b'$', n) else {
+        let min = if self.constructs.math_text_single_dollar { 1 } else { 2 };
+        let close =
+            if n < min { None } else { matching_run(self.t.as_bytes(), start + n, b'$', n) };
+        let Some(close) = close else {
             self.pos = start + n;
             return;
         };
