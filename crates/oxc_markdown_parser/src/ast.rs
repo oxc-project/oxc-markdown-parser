@@ -196,8 +196,8 @@ pub enum CodeBlockKind {
 #[derive(Debug)]
 pub struct HtmlBlock<'a> {
     /// CommonMark HTML block type 1–7.
-    /// Type 1 (`<pre>`/`<script>`/`<style>`/ `<textarea>`) runs to its closing tag;
-    /// the rest end at a blank line,
+    /// Types 1–5 run to their end marker (type 1 closing tag, `-->`, `?>`, `>`, `]]>`);
+    /// types 6–7 end at a blank line,
     /// which is how markdown content interleaves between unbalanced tags.
     pub kind: u8,
     /// Logical content lines, verbatim.
