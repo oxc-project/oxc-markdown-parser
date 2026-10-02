@@ -13,8 +13,9 @@
 //! never what a formatter should do about it.
 
 use crate::options::Constructs;
-use crate::syntax::{self, run_len};
+use crate::syntax;
 
+use super::cursor::Cursor;
 use super::probe::{Start, probe};
 use super::scan;
 
@@ -59,13 +60,7 @@ pub fn ordered_number(marker: &str) -> Option<u32> {
 /// Leading indent is handled here: 4+ columns of indent is indented code (never a block start),
 /// per the default `code_indented` construct.
 pub fn line_start(constructs: &Constructs, line: &str, in_paragraph: bool) -> Option<LineStart> {
-    let indent = run_len(line.as_bytes(), b' ');
-    // 4+ spaces, or a tab anywhere in the first ≤3 columns
-    // (a tab there always advances past column 4): indented code, not a block start.
-    if indent >= 4 || line.as_bytes().get(indent) == Some(&b'\t') {
-        return None;
-    }
-    let tail = &line[indent..];
+    let tail = flow_tail(line)?;
     if let Some(start) = probe(constructs, tail, in_paragraph) {
         return Some(match start {
             Start::Quote => LineStart::Blockquote,
@@ -102,6 +97,24 @@ pub fn line_start(constructs: &Constructs, line: &str, in_paragraph: bool) -> Op
         return Some(LineStart::TableRow);
     }
     None
+}
+
+/// Whether delimiter row `row` opens a table under `header`, the paragraph line right above it.
+///
+/// [`line_start`] reports any delimiter-shaped line as [`LineStart::TableDelimiterRow`];
+/// the row steals `header` only when their cell counts match, otherwise both stay paragraph text
+/// (the engine's `try_start_table`, which also rules out a lazy or deep header).
+pub fn table_delimiter_activates(constructs: &Constructs, header: &str, row: &str) -> bool {
+    flow_tail(header).is_some()
+        && matches!(
+            flow_tail(row).and_then(|tail| probe(constructs, tail, true)),
+            Some(Start::TableDelimiter(align)) if scan::table_row_cells(header).len() == align.len()
+        )
+}
+
+/// `line` from where a flow construct could start, `None` when it is indented-code-deep.
+fn flow_tail(line: &str) -> Option<&str> {
+    Cursor::new(line, 0).flow_start().map(|cursor| cursor.tail())
 }
 
 #[cfg(test)]
@@ -144,6 +157,22 @@ mod tests {
         assert_eq!(md(":::)", false), None, "an emoticon is paragraph text");
         assert_eq!(md("| - | - |", true), Some(LineStart::TableDelimiterRow));
         assert_eq!(md("| a | b |", false), Some(LineStart::TableRow));
+    }
+
+    #[test]
+    fn table_delimiter_activates_on_matching_cells() {
+        let md = Constructs::markdown();
+        assert!(table_delimiter_activates(&md, "| a | b |", "| - | - |"));
+        assert!(table_delimiter_activates(&md, "a | b", "--- | ---"));
+        assert!(
+            !table_delimiter_activates(&md, "| a | b |", "| - | - | - |"),
+            "a cell count mismatch"
+        );
+        assert!(!table_delimiter_activates(&md, "| a | b |", "| a | b |"), "not a delimiter row");
+        assert!(
+            !table_delimiter_activates(&md, "    | a | b |", "| - | - |"),
+            "an indented header"
+        );
     }
 
     #[test]
