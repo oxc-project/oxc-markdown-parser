@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/oxc-project/oxc-markdown-parser/compare/oxc-markdown-parser-v0.0.2...oxc-markdown-parser-v0.0.3) - 2026-10-02
+
+### Added
+
+- *(parser)* add lexical::table_delimiter_activates ([#28](https://github.com/oxc-project/oxc-markdown-parser/pull/28))
+
+### Other
+
+- *(parser)* correct HtmlBlock end conditions ([#23](https://github.com/oxc-project/oxc-markdown-parser/pull/23))
+
 ## [0.0.2](https://github.com/oxc-project/oxc-markdown-parser/compare/oxc-markdown-parser-v0.0.1...oxc-markdown-parser-v0.0.2) - 2026-09-24
 
 ### Added
