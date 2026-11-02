@@ -8,13 +8,23 @@
 // which is exactly JS `\s`, not Rust's `char::is_whitespace`.
 use crate::syntax::unicode::{is_punctuation, is_whitespace};
 
+/// Bytes a literal attempt is made at: the atext an email starts with
+/// (`_` aside, which attention takes when the attempt fails).
+pub fn is_start(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || matches!(b, b'+' | b'-' | b'.')
+}
+
 /// Attempts a literal at `pos`, `prev` is the character before it.
+/// `at_ahead`: whether an `@` follows somewhere, without which no email is tried.
 /// Returns the end position.
-pub fn scan(t: &str, pos: usize, prev: Option<char>) -> Option<usize> {
+pub fn scan(t: &str, pos: usize, prev: Option<char>, at_ahead: bool) -> Option<usize> {
+    if at_ahead && let Some(end) = email(t, pos, prev) {
+        return Some(end);
+    }
     match t.as_bytes()[pos] {
-        b'h' | b'H' => email(t, pos, prev).or_else(|| http(t, pos, prev)),
-        b'w' | b'W' => email(t, pos, prev).or_else(|| www(t, pos, prev)),
-        _ => email(t, pos, prev),
+        b'h' | b'H' => http(t, pos, prev),
+        b'w' | b'W' => www(t, pos, prev),
+        _ => None,
     }
 }
 
@@ -246,6 +256,11 @@ fn trail_check(t: &str, mut i: usize) -> Result<(), usize> {
 mod tests {
     use super::*;
 
+    /// With an `@` ahead (the tokenizer's gate)
+    fn scan(t: &str, pos: usize, prev: Option<char>) -> Option<usize> {
+        super::scan(t, pos, prev, true)
+    }
+
     #[test]
     fn literal_kinds() {
         assert_eq!(literal_kind("http://x.y"), LiteralKind::Http);
@@ -261,6 +276,7 @@ mod tests {
         assert_eq!(scan("http://x.y/p(q)", 0, None), Some(15));
         assert_eq!(scan("http://x.y/p)", 0, None), Some(12), "unbalanced paren excluded");
         assert_eq!(scan("a@b.cd,", 0, None), Some(6));
+        assert_eq!(super::scan("a@b.cd", 0, None, false), None, "no email without an `@` ahead");
     }
 
     #[test]
@@ -273,5 +289,21 @@ mod tests {
         assert_eq!(scan("http://x.y", 0, Some('1')), Some(10));
         assert_eq!(scan("a@b.cd", 0, Some('/')), None);
         assert_eq!(scan("a@b.cd", 0, Some('.')), None, "atext before an email is part of it");
+    }
+
+    #[test]
+    fn starts_are_atext_but_underscore() {
+        for b in 0..=u8::MAX {
+            assert_eq!(is_start(b), b != b'_' && is_atext(char::from(b)), "{b}");
+        }
+    }
+
+    #[test]
+    fn no_start_after_an_ascii_letter() {
+        // The tokenizer skips the rest of a word on this
+        for t in ["http://x.y", "HTTPS://x.y", "www.x.y", "a@b.cd", "+a@b.cd"] {
+            assert_eq!(scan(t, 0, Some('a')), None, "{t}");
+            assert_eq!(scan(t, 0, Some('Z')), None, "{t}");
+        }
     }
 }

@@ -126,6 +126,7 @@ pub fn inlines<'a>(
         first_delim_tilde: None,
         liquid_exhausted: [false; 2],
         wiki_dead: 0,
+        last_at: input.text.rfind('@'),
     };
     tk.run();
     let mut out = ArenaVec::new_in(&allocator);
@@ -157,6 +158,9 @@ pub struct Tokenizer<'i, 'r> {
     /// Where a wiki link scan last failed:
     /// every `[[` before it fails at the same place, skip the rescans (quadratic otherwise).
     wiki_dead: usize,
+    /// The last `@`: an email needs one after its start,
+    /// so no attempt past it scans its word for an email.
+    last_at: Option<usize>,
 }
 
 impl Tokenizer<'_, '_> {
@@ -193,13 +197,21 @@ impl Tokenizer<'_, '_> {
                 b'_' if self.try_autolink_literal() => {}
                 b'*' | b'_' => self.delimiter_run(),
                 b'~' if self.constructs.gfm_strikethrough => self.delimiter_run(),
-                // GFM autolink literals start on alphanumerics and `+-.`
-                // (`_` belongs to attention, which wins there);
-                // the previous-character gates inside `scan` make most attempts O(1).
-                // Suppressed inside an open bracket label.
-                c if (c.is_ascii_alphanumeric() || matches!(c, b'+' | b'-' | b'.')) => {
+                c if gfm_autolink::is_start(c) => {
                     if !self.try_autolink_literal() {
-                        self.pos += 1;
+                        // Every gate rejects an ASCII letter before the start,
+                        // so no literal starts in the rest of the word:
+                        // past its letters and the start byte right after them
+                        let letters = bytes[self.pos..]
+                            .iter()
+                            .take_while(|b| b.is_ascii_alphabetic())
+                            .count();
+                        self.pos += letters.max(1);
+                        if letters > 0
+                            && bytes.get(self.pos).copied().is_some_and(gfm_autolink::is_start)
+                        {
+                            self.pos += 1;
+                        }
                     }
                 }
                 // Footnote calls are extension constructs and outrank the core label start;
@@ -225,7 +237,8 @@ impl Tokenizer<'_, '_> {
             return false;
         }
         let prev = self.t[..self.pos].chars().next_back();
-        let Some(end) = gfm_autolink::scan(self.t, self.pos, prev) else { return false };
+        let at_ahead = self.last_at.is_some_and(|at| at > self.pos);
+        let Some(end) = gfm_autolink::scan(self.t, self.pos, prev, at_ahead) else { return false };
         self.flush_text(self.pos);
         self.nodes.push(PN::AutolinkLiteral(self.pos..end));
         self.pos = end;
