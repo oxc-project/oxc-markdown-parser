@@ -14,6 +14,12 @@ pub fn is_start(b: u8) -> bool {
     b.is_ascii_alphanumeric() || matches!(b, b'+' | b'-' | b'.')
 }
 
+/// Whether [`scan`] can match at byte `b`:
+/// `http` / `www` start with their letter, anything else only an email (`at_ahead`).
+pub fn may_start(b: u8, at_ahead: bool) -> bool {
+    at_ahead || matches!(b, b'h' | b'H' | b'w' | b'W')
+}
+
 /// Attempts a literal at `pos`, `prev` is the character before it.
 /// `at_ahead`: whether an `@` follows somewhere, without which no email is tried.
 /// Returns the end position.
@@ -289,6 +295,16 @@ mod tests {
         assert_eq!(scan("http://x.y", 0, Some('1')), Some(10));
         assert_eq!(scan("a@b.cd", 0, Some('/')), None);
         assert_eq!(scan("a@b.cd", 0, Some('.')), None, "atext before an email is part of it");
+    }
+
+    #[test]
+    fn no_match_where_may_start_rejects() {
+        for b in (0..0x80u8).filter(|&b| !may_start(b, false)) {
+            for rest in ["ttp://x.y", "ww.x.y", "@b.cd"] {
+                let t = format!("{}{rest}", char::from(b));
+                assert_eq!(super::scan(&t, 0, None, false), None, "{t:?}");
+            }
+        }
     }
 
     #[test]

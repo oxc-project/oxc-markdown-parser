@@ -194,11 +194,11 @@ impl Tokenizer<'_, '_> {
                 // Extensions run before core constructs in micromark,
                 // so a literal email may start at `_` (atext);
                 // attention only gets the run when the email attempt fails.
-                b'_' if self.try_autolink_literal() => {}
+                b'_' if self.try_autolink_literal(b'_') => {}
                 b'*' | b'_' => self.delimiter_run(),
                 b'~' if self.constructs.gfm_strikethrough => self.delimiter_run(),
                 c if gfm_autolink::is_start(c) => {
-                    if !self.try_autolink_literal() {
+                    if !self.try_autolink_literal(c) {
                         // Every gate rejects an ASCII letter before the start,
                         // so no literal starts in the rest of the word:
                         // past its letters and the start byte right after them
@@ -221,6 +221,8 @@ impl Tokenizer<'_, '_> {
                 b'[' => self.open_bracket(false),
                 b'!' if bytes.get(self.pos + 1) == Some(&b'[') => self.open_bracket(true),
                 b']' => self.close_bracket(),
+                // No arm takes a non-ASCII byte: skip the run (CJK text)
+                0x80.. => self.pos += bytes[self.pos..].iter().take_while(|&&b| b >= 0x80).count(),
                 _ => self.pos += 1,
             }
         }
@@ -229,15 +231,19 @@ impl Tokenizer<'_, '_> {
         self.process_emphasis_final();
     }
 
-    /// GFM autolink literal attempt at the current byte.
-    /// The previous- character gates inside the scanner keep failed attempts O(1);
+    /// GFM autolink literal attempt at the current byte `b`.
+    /// Most bytes fail `may_start` before the previous character is decoded,
+    /// the scanner's previous-character gates keep the rest O(1);
     /// literals never start inside an open bracket label.
-    fn try_autolink_literal(&mut self) -> bool {
-        if !self.constructs.gfm_autolink_literal || !self.brackets.is_empty() {
+    fn try_autolink_literal(&mut self, b: u8) -> bool {
+        let at_ahead = self.last_at.is_some_and(|at| at > self.pos);
+        if !gfm_autolink::may_start(b, at_ahead)
+            || !self.constructs.gfm_autolink_literal
+            || !self.brackets.is_empty()
+        {
             return false;
         }
         let prev = self.t[..self.pos].chars().next_back();
-        let at_ahead = self.last_at.is_some_and(|at| at > self.pos);
         let Some(end) = gfm_autolink::scan(self.t, self.pos, prev, at_ahead) else { return false };
         self.flush_text(self.pos);
         self.nodes.push(PN::AutolinkLiteral(self.pos..end));
