@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5](https://github.com/oxc-project/oxc-markdown-parser/compare/oxc-markdown-parser-v0.0.4...oxc-markdown-parser-v0.0.5) - 2026-11-03
+
+### Other
+
+- *(parser)* skip text no inline construct can start in ([#41](https://github.com/oxc-project/oxc-markdown-parser/pull/41))
+
 ## [0.0.4](https://github.com/oxc-project/oxc-markdown-parser/compare/oxc-markdown-parser-v0.0.3...oxc-markdown-parser-v0.0.4) - 2026-11-02
 
 ### Other
