@@ -1,4 +1,4 @@
-// Vendored verbatim from prettier/prettier@811d26813
+// Vendored verbatim from prettier/prettier@b688380af
 // src/language-markdown/parse/micromark/micromark-extension-liquid.js
 // Copyright © James Long and contributors, MIT License.
 // `just vendor-check` diffs this file against that commit; everything below this line is theirs.
