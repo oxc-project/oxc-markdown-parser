@@ -375,8 +375,8 @@ impl<'s> Engine<'s> {
     /// (micromark runs each container's closing-fence attempt ahead of its content chunk).
     fn match_stack(&self, cur: &mut Cursor<'s>) -> StackMatch {
         let mut matched = 0usize;
-        for i in 0..self.stack.len() {
-            let ok = match &self.stack[i] {
+        for (i, container) in self.stack.iter().enumerate() {
+            let ok = match container {
                 OpenContainer::Quote { .. } => {
                     let save = *cur;
                     cur.skip_indent_up_to(3);
